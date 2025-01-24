@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar as CalendarIcon, Briefcase } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Briefcase, Building2, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { logout } = useAuth();
@@ -14,9 +15,30 @@ const Dashboard = () => {
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <Button variant="outline" onClick={logout}>
-            Logout
-          </Button>
+          <div className="flex gap-4">
+            <Link to="/operators">
+              <Button variant="outline">
+                <Users className="mr-2 h-4 w-4" />
+                Operatori
+              </Button>
+            </Link>
+            <Link to="/clients">
+              <Button variant="outline">
+                <Building2 className="mr-2 h-4 w-4" />
+                Clienti
+              </Button>
+            </Link>
+            <Link to="/events">
+              <Button variant="outline">
+                <Briefcase className="mr-2 h-4 w-4" />
+                Eventi
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -24,9 +46,7 @@ const Dashboard = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <Card className="animate-slide-up">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Eventi Totali
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Eventi Totali</CardTitle>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
