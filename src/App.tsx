@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Operators from "./pages/Operators";
 import Clients from "./pages/Clients";
 import Events from "./pages/Events";
+import EventCreate from "./pages/EventCreate";
 import Index from "./pages/Index";
 
 function App() {
@@ -44,6 +45,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Events />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/create"
+          element={
+            <ProtectedRoute>
+              <EventCreate />
             </ProtectedRoute>
           }
         />
