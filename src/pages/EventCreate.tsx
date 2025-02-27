@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Event } from "./Events";
 
@@ -41,6 +41,11 @@ const EVENTS_STORAGE_KEY = "app_events_data";
 
 const EventCreate = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Recupera l'ID dell'evento da modificare (se presente)
+  const eventId = new URLSearchParams(location.search).get("id");
+  const isEditMode = !!eventId;
   
   // Stati per il form
   const [title, setTitle] = useState("");
@@ -50,6 +55,64 @@ const EventCreate = () => {
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
+  const [location, setLocation] = useState("");
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Mock delle località suggerite (in una implementazione reale, questo verrebbe da Google Maps API)
+  const mockLocations = [
+    "Roma, Italia",
+    "Milano, Italia",
+    "Napoli, Italia",
+    "Firenze, Italia",
+    "Torino, Italia",
+    "Bologna, Italia",
+    "Palermo, Italia",
+    "Bari, Italia"
+  ];
+  
+  // Carica i dati dell'evento se siamo in modalità modifica
+  useEffect(() => {
+    if (isEditMode) {
+      try {
+        const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
+        if (storedEvents) {
+          const events: Event[] = JSON.parse(storedEvents).map((event: any) => ({
+            ...event,
+            startDate: new Date(event.startDate),
+            endDate: new Date(event.endDate)
+          }));
+          
+          const eventToEdit = events.find(e => e.id === Number(eventId));
+          
+          if (eventToEdit) {
+            // Popola i campi del form con i dati dell'evento
+            setTitle(eventToEdit.title);
+            
+            // Trova l'ID del cliente dal nome
+            const clientObject = clients.find(c => c.name === eventToEdit.client);
+            if (clientObject) {
+              setClient(clientObject.id.toString());
+            }
+            
+            setSelectedPersonnel(eventToEdit.personnelTypes);
+            setStartDate(eventToEdit.startDate);
+            setEndDate(eventToEdit.endDate);
+            setStartTime(format(eventToEdit.startDate, "HH:mm"));
+            setEndTime(format(eventToEdit.endDate, "HH:mm"));
+            
+            // Imposta la località se presente
+            if (eventToEdit.location) {
+              setLocation(eventToEdit.location);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Errore nel caricare i dati dell'evento:", error);
+        toast.error("Impossibile caricare i dati dell'evento");
+      }
+    }
+  }, [eventId, isEditMode]);
   
   // Gestione personale selezionato
   const handlePersonnelChange = (personnelId: string) => {
@@ -60,6 +123,28 @@ const EventCreate = () => {
         return [...current, personnelId];
       }
     });
+  };
+  
+  // Gestione suggerimenti località
+  const handleLocationChange = (value: string) => {
+    setLocation(value);
+    
+    if (value.length > 2) {
+      // In una implementazione reale, qui chiameremmo l'API di Google Maps
+      const filtered = mockLocations.filter(loc => 
+        loc.toLowerCase().includes(value.toLowerCase())
+      );
+      setLocationSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+  
+  // Gestione selezione suggerimento
+  const handleSelectSuggestion = (suggestion: string) => {
+    setLocation(suggestion);
+    setShowSuggestions(false);
   };
   
   // Gestione invio form
@@ -85,29 +170,57 @@ const EventCreate = () => {
     try {
       // Carichiamo gli eventi esistenti dal localStorage
       const existingEventsJson = localStorage.getItem(EVENTS_STORAGE_KEY) || "[]";
-      const existingEvents: Event[] = JSON.parse(existingEventsJson);
-      
-      // Troviamo l'ID più alto per assegnare un nuovo ID
-      const maxId = existingEvents.reduce((max, event) => Math.max(max, event.id), 0);
+      const existingEvents: Event[] = JSON.parse(existingEventsJson).map((event: any) => ({
+        ...event,
+        startDate: new Date(event.startDate),
+        endDate: new Date(event.endDate)
+      }));
       
       // Troviamo il nome del cliente dal suo ID
       const selectedClient = clients.find(c => c.id.toString() === client);
       
-      // Creiamo il nuovo evento
-      const newEvent: Event = {
-        id: maxId + 1,
-        title,
-        client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
-        startDate: fullStartDate,
-        endDate: fullEndDate,
-        personnelTypes: selectedPersonnel,
-      };
+      if (isEditMode) {
+        // Aggiornamento evento esistente
+        const updatedEvents = existingEvents.map(event => {
+          if (event.id === Number(eventId)) {
+            return {
+              ...event,
+              title,
+              client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
+              startDate: fullStartDate,
+              endDate: fullEndDate,
+              personnelTypes: selectedPersonnel,
+              location
+            };
+          }
+          return event;
+        });
+        
+        localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
+        toast.success("Evento aggiornato con successo!");
+      } else {
+        // Creazione nuovo evento
+        // Troviamo l'ID più alto per assegnare un nuovo ID
+        const maxId = existingEvents.reduce((max, event) => Math.max(max, event.id), 0);
+        
+        // Creiamo il nuovo evento
+        const newEvent: Event = {
+          id: maxId + 1,
+          title,
+          client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
+          startDate: fullStartDate,
+          endDate: fullEndDate,
+          personnelTypes: selectedPersonnel,
+          location
+        };
+        
+        // Aggiungiamo il nuovo evento alla lista e salviamo
+        const updatedEvents = [...existingEvents, newEvent];
+        localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
+        
+        toast.success("Evento creato con successo!");
+      }
       
-      // Aggiungiamo il nuovo evento alla lista e salviamo
-      const updatedEvents = [...existingEvents, newEvent];
-      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
-      
-      toast.success("Evento creato con successo!");
       navigate("/events");
     } catch (error) {
       console.error("Errore durante il salvataggio dell'evento:", error);
@@ -140,9 +253,11 @@ const EventCreate = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Crea nuovo evento</CardTitle>
+          <CardTitle>{isEditMode ? "Modifica evento" : "Crea nuovo evento"}</CardTitle>
           <CardDescription>
-            Compila il form per creare un nuovo evento
+            {isEditMode 
+              ? "Modifica i dettagli dell'evento esistente" 
+              : "Compila il form per creare un nuovo evento"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -177,6 +292,47 @@ const EventCreate = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Località evento con suggerimenti */}
+            <div className="space-y-2">
+              <Label htmlFor="location">Località evento</Label>
+              <div className="relative">
+                <div className="flex">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="location" 
+                      placeholder="Inserisci località evento" 
+                      value={location}
+                      onChange={(e) => handleLocationChange(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                {/* Suggerimenti località */}
+                {showSuggestions && (
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
+                    <ul className="py-1">
+                      {locationSuggestions.map((suggestion, index) => (
+                        <li 
+                          key={index}
+                          className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleSelectSuggestion(suggestion)}
+                        >
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Inizia a digitare per vedere i suggerimenti
+              </p>
             </div>
             
             {/* Tipo di personale */}
@@ -249,7 +405,7 @@ const EventCreate = () => {
             
             <div className="pt-4">
               <Button type="submit" className="w-full md:w-auto">
-                Crea Evento
+                {isEditMode ? "Aggiorna Evento" : "Crea Evento"}
               </Button>
             </div>
           </form>
