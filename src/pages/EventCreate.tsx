@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Layout from "@/components/Layout";
@@ -39,6 +39,12 @@ const clients = [
 // Chiave per il localStorage
 const EVENTS_STORAGE_KEY = "app_events_data";
 
+// Interfaccia per i risultati di Google Places API
+interface PlacePrediction {
+  description: string;
+  place_id: string;
+}
+
 const EventCreate = () => {
   const navigate = useNavigate();
   const locationHook = useLocation();
@@ -56,20 +62,45 @@ const EventCreate = () => {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
   const [eventLocation, setEventLocation] = useState("");
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<PlacePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
-  // Mock delle località suggerite (in una implementazione reale, questo verrebbe da Google Maps API)
-  const mockLocations = [
-    "Roma, Italia",
-    "Milano, Italia",
-    "Napoli, Italia",
-    "Firenze, Italia",
-    "Torino, Italia",
-    "Bologna, Italia",
-    "Palermo, Italia",
-    "Bari, Italia"
-  ];
+  // Ref per lo script di Google Maps
+  const googleScriptLoaded = useRef(false);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  
+  // Carica lo script di Google Maps
+  useEffect(() => {
+    if (!googleScriptLoaded.current) {
+      // Callback quando lo script è caricato
+      const initGoogleMapsServices = () => {
+        if (window.google && window.google.maps && window.google.maps.places) {
+          autocompleteService.current = new window.google.maps.places.AutocompleteService();
+          googleScriptLoaded.current = true;
+          console.log("Google Maps API loaded successfully");
+        }
+      };
+
+      // Crea lo script per Google Maps API
+      const googleMapsScript = document.createElement("script");
+      googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC0HttgvqRiRYKBoRh_pnUsyqem4AqO1zY&libraries=places&callback=initGoogleMapsCallback`;
+      googleMapsScript.async = true;
+      googleMapsScript.defer = true;
+      
+      // Aggiungi la callback globale
+      window.initGoogleMapsCallback = initGoogleMapsServices;
+      
+      // Aggiungi lo script al DOM
+      document.head.appendChild(googleMapsScript);
+      
+      // Cleanup
+      return () => {
+        // Rimuovi lo script e la callback globale
+        document.head.removeChild(googleMapsScript);
+        delete window.initGoogleMapsCallback;
+      };
+    }
+  }, []);
   
   // Carica i dati dell'evento se siamo in modalità modifica
   useEffect(() => {
@@ -125,25 +156,35 @@ const EventCreate = () => {
     });
   };
   
-  // Gestione suggerimenti località
+  // Gestione suggerimenti località con Google Places API
   const handleLocationChange = (value: string) => {
     setEventLocation(value);
     
-    if (value.length > 2) {
-      // In una implementazione reale, qui chiameremmo l'API di Google Maps
-      const filtered = mockLocations.filter(loc => 
-        loc.toLowerCase().includes(value.toLowerCase())
+    if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
+      // Utilizziamo l'API di Google Places per ottenere suggerimenti
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: value,
+          types: ['(cities)'] // Limita i risultati a città
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setLocationSuggestions(predictions);
+            setShowSuggestions(true);
+          } else {
+            setLocationSuggestions([]);
+            setShowSuggestions(false);
+          }
+        }
       );
-      setLocationSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
     } else {
       setShowSuggestions(false);
     }
   };
   
   // Gestione selezione suggerimento
-  const handleSelectSuggestion = (suggestion: string) => {
-    setEventLocation(suggestion);
+  const handleSelectSuggestion = (suggestion: PlacePrediction) => {
+    setEventLocation(suggestion.description);
     setShowSuggestions(false);
   };
   
@@ -294,7 +335,7 @@ const EventCreate = () => {
               </Select>
             </div>
             
-            {/* Località evento con suggerimenti */}
+            {/* Località evento con suggerimenti Google Maps */}
             <div className="space-y-2">
               <Label htmlFor="eventLocation">Località evento</Label>
               <div className="relative">
@@ -313,17 +354,17 @@ const EventCreate = () => {
                   </div>
                 </div>
                 
-                {/* Suggerimenti località */}
-                {showSuggestions && (
+                {/* Suggerimenti località da Google Maps */}
+                {showSuggestions && locationSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
                     <ul className="py-1">
-                      {locationSuggestions.map((suggestion, index) => (
+                      {locationSuggestions.map((suggestion) => (
                         <li 
-                          key={index}
+                          key={suggestion.place_id}
                           className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
                           onClick={() => handleSelectSuggestion(suggestion)}
                         >
-                          {suggestion}
+                          {suggestion.description}
                         </li>
                       ))}
                     </ul>
@@ -331,7 +372,7 @@ const EventCreate = () => {
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                Inizia a digitare per vedere i suggerimenti
+                Inizia a digitare per vedere i suggerimenti (minimo 3 caratteri)
               </p>
             </div>
             
@@ -414,5 +455,13 @@ const EventCreate = () => {
     </Layout>
   );
 };
+
+// Aggiungi la dichiarazione del tipo per la callback di Google Maps
+declare global {
+  interface Window {
+    google: typeof google;
+    initGoogleMapsCallback: () => void;
+  }
+}
 
 export default EventCreate;
