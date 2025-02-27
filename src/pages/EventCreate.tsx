@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Calendar as CalendarIcon, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { Event } from "./Events";
 
 // Tipo di personale con etichette
 const personnelTypes = [
@@ -34,6 +35,9 @@ const clients = [
   { id: 3, name: "Festival Italiano" },
   { id: 4, name: "Sport Events" },
 ];
+
+// Chiave per il localStorage
+const EVENTS_STORAGE_KEY = "app_events_data";
 
 const EventCreate = () => {
   const navigate = useNavigate();
@@ -68,7 +72,7 @@ const EventCreate = () => {
       return;
     }
     
-    // Creazione oggetto evento completo (qui potresti salvarlo in un DB)
+    // Creazione oggetto evento completo
     const fullStartDate = combineDateTime(startDate, startTime);
     const fullEndDate = combineDateTime(endDate, endTime);
     
@@ -77,10 +81,38 @@ const EventCreate = () => {
       toast.error("La data di fine deve essere successiva alla data di inizio");
       return;
     }
-    
-    // Qui andrebbe integrata la logica per salvare l'evento
-    toast.success("Evento creato con successo!");
-    navigate("/events");
+
+    try {
+      // Carichiamo gli eventi esistenti dal localStorage
+      const existingEventsJson = localStorage.getItem(EVENTS_STORAGE_KEY) || "[]";
+      const existingEvents: Event[] = JSON.parse(existingEventsJson);
+      
+      // Troviamo l'ID più alto per assegnare un nuovo ID
+      const maxId = existingEvents.reduce((max, event) => Math.max(max, event.id), 0);
+      
+      // Troviamo il nome del cliente dal suo ID
+      const selectedClient = clients.find(c => c.id.toString() === client);
+      
+      // Creiamo il nuovo evento
+      const newEvent: Event = {
+        id: maxId + 1,
+        title,
+        client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
+        startDate: fullStartDate,
+        endDate: fullEndDate,
+        personnelTypes: selectedPersonnel,
+      };
+      
+      // Aggiungiamo il nuovo evento alla lista e salviamo
+      const updatedEvents = [...existingEvents, newEvent];
+      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
+      
+      toast.success("Evento creato con successo!");
+      navigate("/events");
+    } catch (error) {
+      console.error("Errore durante il salvataggio dell'evento:", error);
+      toast.error("Errore durante il salvataggio dell'evento");
+    }
   };
   
   // Funzione per combinare data e ora

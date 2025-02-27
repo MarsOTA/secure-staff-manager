@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,8 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
-interface Event {
+// Definizione dell'interfaccia Event per l'applicazione
+export interface Event {
   id: number;
   title: string;
   client: string;
@@ -25,28 +26,84 @@ interface Event {
   personnelTypes: string[];
 }
 
+// Chiave per il localStorage
+const EVENTS_STORAGE_KEY = "app_events_data";
+
 const Events = () => {
   const navigate = useNavigate();
   
-  // Dati di esempio degli eventi
-  const [events] = useState<Event[]>([
-    {
-      id: 1,
-      title: "Concerto Rock in Roma",
-      client: "Rock Productions",
-      startDate: new Date(2023, 6, 15, 18, 0),
-      endDate: new Date(2023, 6, 15, 23, 30),
-      personnelTypes: ["security", "doorman", "hostess/steward"],
-    },
-    {
-      id: 2,
-      title: "Fiera del Libro",
-      client: "MediaGroup",
-      startDate: new Date(2023, 7, 10, 9, 0),
-      endDate: new Date(2023, 7, 12, 19, 0),
-      personnelTypes: ["security", "hostess/steward"],
-    },
-  ]);
+  // Stato per gli eventi
+  const [events, setEvents] = useState<Event[]>([]);
+  
+  // Carica gli eventi dal localStorage all'avvio
+  useEffect(() => {
+    const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
+    
+    if (storedEvents) {
+      try {
+        // Parsifichiamo gli eventi dal localStorage
+        const parsedEvents = JSON.parse(storedEvents);
+        
+        // Convertiamo le stringhe di date in oggetti Date
+        const eventsWithDates = parsedEvents.map((event: any) => ({
+          ...event,
+          startDate: new Date(event.startDate),
+          endDate: new Date(event.endDate)
+        }));
+        
+        setEvents(eventsWithDates);
+      } catch (error) {
+        console.error("Errore nel caricamento degli eventi:", error);
+        
+        // Dati di esempio come fallback
+        setEvents([
+          {
+            id: 1,
+            title: "Concerto Rock in Roma",
+            client: "Rock Productions",
+            startDate: new Date(2023, 6, 15, 18, 0),
+            endDate: new Date(2023, 6, 15, 23, 30),
+            personnelTypes: ["security", "doorman", "hostess/steward"],
+          },
+          {
+            id: 2,
+            title: "Fiera del Libro",
+            client: "MediaGroup",
+            startDate: new Date(2023, 7, 10, 9, 0),
+            endDate: new Date(2023, 7, 12, 19, 0),
+            personnelTypes: ["security", "hostess/steward"],
+          },
+        ]);
+      }
+    } else {
+      // Nessun evento nel localStorage, utilizziamo i dati di esempio
+      setEvents([
+        {
+          id: 1,
+          title: "Concerto Rock in Roma",
+          client: "Rock Productions",
+          startDate: new Date(2023, 6, 15, 18, 0),
+          endDate: new Date(2023, 6, 15, 23, 30),
+          personnelTypes: ["security", "doorman", "hostess/steward"],
+        },
+        {
+          id: 2,
+          title: "Fiera del Libro",
+          client: "MediaGroup",
+          startDate: new Date(2023, 7, 10, 9, 0),
+          endDate: new Date(2023, 7, 12, 19, 0),
+          personnelTypes: ["security", "hostess/steward"],
+        },
+      ]);
+    }
+  }, []);
+  
+  // Salva gli eventi nel localStorage quando cambiano
+  useEffect(() => {
+    if (events.length > 0) {
+      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+    }
+  }, [events]);
 
   // Funzione per formattare data e ora
   const formatDateRange = (start: Date, end: Date) => {
