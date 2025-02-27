@@ -41,10 +41,10 @@ const EVENTS_STORAGE_KEY = "app_events_data";
 
 const EventCreate = () => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const locationHook = useLocation();
   
   // Recupera l'ID dell'evento da modificare (se presente)
-  const eventId = new URLSearchParams(location.search).get("id");
+  const eventId = new URLSearchParams(locationHook.search).get("id");
   const isEditMode = !!eventId;
   
   // Stati per il form
@@ -55,7 +55,7 @@ const EventCreate = () => {
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
-  const [location, setLocation] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   
@@ -103,7 +103,7 @@ const EventCreate = () => {
             
             // Imposta la località se presente
             if (eventToEdit.location) {
-              setLocation(eventToEdit.location);
+              setEventLocation(eventToEdit.location);
             }
           }
         }
@@ -127,7 +127,7 @@ const EventCreate = () => {
   
   // Gestione suggerimenti località
   const handleLocationChange = (value: string) => {
-    setLocation(value);
+    setEventLocation(value);
     
     if (value.length > 2) {
       // In una implementazione reale, qui chiameremmo l'API di Google Maps
@@ -143,7 +143,7 @@ const EventCreate = () => {
   
   // Gestione selezione suggerimento
   const handleSelectSuggestion = (suggestion: string) => {
-    setLocation(suggestion);
+    setEventLocation(suggestion);
     setShowSuggestions(false);
   };
   
@@ -190,7 +190,7 @@ const EventCreate = () => {
               startDate: fullStartDate,
               endDate: fullEndDate,
               personnelTypes: selectedPersonnel,
-              location
+              location: eventLocation
             };
           }
           return event;
@@ -211,7 +211,7 @@ const EventCreate = () => {
           startDate: fullStartDate,
           endDate: fullEndDate,
           personnelTypes: selectedPersonnel,
-          location
+          location: eventLocation
         };
         
         // Aggiungiamo il nuovo evento alla lista e salviamo
@@ -296,7 +296,7 @@ const EventCreate = () => {
             
             {/* Località evento con suggerimenti */}
             <div className="space-y-2">
-              <Label htmlFor="location">Località evento</Label>
+              <Label htmlFor="eventLocation">Località evento</Label>
               <div className="relative">
                 <div className="flex">
                   <div className="relative flex-1">
@@ -304,9 +304,9 @@ const EventCreate = () => {
                       <MapPin className="w-4 h-4 text-gray-400" />
                     </div>
                     <Input 
-                      id="location" 
+                      id="eventLocation" 
                       placeholder="Inserisci località evento" 
-                      value={location}
+                      value={eventLocation}
                       onChange={(e) => handleLocationChange(e.target.value)}
                       className="pl-10"
                     />
