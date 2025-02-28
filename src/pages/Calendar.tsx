@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Event } from "./Events";
@@ -16,6 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar as BigCalendar, dateFnsLocalizer, Views } from 'react-big-calendar';
+import { format as formatTz, parse, startOfWeek, getDay } from 'date-fns';
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // Tipo Operatore
 interface Operator {
@@ -31,21 +33,38 @@ interface Operator {
 const EVENTS_STORAGE_KEY = "app_events_data";
 const OPERATORS_STORAGE_KEY = "app_operators_data";
 
-// Definizione del contenuto del calendario
-interface CalendarContent {
-  [date: string]: {
-    events: Event[];
-    hasEvents: boolean;
-  };
+// Configurazione del localizzatore per il calendario
+const locales = {
+  'it': it,
+};
+
+const localizer = dateFnsLocalizer({
+  format: formatTz,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+// Interfaccia per gli eventi del calendario
+interface CalendarEvent {
+  id: number;
+  title: string;
+  start: Date;
+  end: Date;
+  client?: string;
+  location?: string;
+  address?: string;
+  originalEvent: Event;
 }
 
 const Calendar = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
-  const [calendarContent, setCalendarContent] = useState<CalendarContent>({});
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedEvents, setSelectedEvents] = useState<Event[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [selectedView, setSelectedView] = useState<string>(Views.MONTH);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   // Caricamento dati
@@ -79,48 +98,23 @@ const Calendar = () => {
     }
   }, []);
 
-  // Preparazione contenuto calendario
+  // Converti gli eventi per il formato del calendario
   useEffect(() => {
     if (events.length > 0) {
-      const content: CalendarContent = {};
+      const formattedEvents = events.map(event => ({
+        id: event.id,
+        title: event.title,
+        start: new Date(event.startDate),
+        end: new Date(event.endDate),
+        client: event.client,
+        location: event.location,
+        address: event.address,
+        originalEvent: event
+      }));
       
-      // Itera su tutti i giorni del mese corrente
-      const currentMonth = selectedMonth.getMonth();
-      const currentYear = selectedMonth.getFullYear();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(currentYear, currentMonth, day);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        
-        // Filtra eventi che si svolgono in questa data
-        const eventsOnDay = events.filter(event => {
-          const eventStart = new Date(event.startDate);
-          const eventEnd = new Date(event.endDate);
-          
-          // Normalizza le date per confrontare solo giorno/mese/anno
-          const normalizedDate = new Date(date);
-          normalizedDate.setHours(0, 0, 0, 0);
-          
-          const normalizedStart = new Date(eventStart);
-          normalizedStart.setHours(0, 0, 0, 0);
-          
-          const normalizedEnd = new Date(eventEnd);
-          normalizedEnd.setHours(0, 0, 0, 0);
-          
-          // Controlla se la data è compresa nell'intervallo dell'evento
-          return normalizedDate >= normalizedStart && normalizedDate <= normalizedEnd;
-        });
-        
-        content[dateStr] = {
-          events: eventsOnDay,
-          hasEvents: eventsOnDay.length > 0
-        };
-      }
-      
-      setCalendarContent(content);
+      setCalendarEvents(formattedEvents);
     }
-  }, [events, selectedMonth]);
+  }, [events]);
 
   // Funzione per ottenere gli operatori assegnati a un evento
   const getOperatorsForEvent = (eventId: number) => {
@@ -129,38 +123,10 @@ const Calendar = () => {
     );
   };
 
-  // Gestione selezione data
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      if (calendarContent[dateStr] && calendarContent[dateStr].hasEvents) {
-        setSelectedDate(date);
-        setSelectedEvents(calendarContent[dateStr].events);
-        setIsDetailsOpen(true);
-      }
-    }
-  };
-
-  // Funzione per generare il contenuto modifidato per i giorni del calendario
-  const modifyDayContent = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const hasEventsToday = calendarContent[dateStr]?.hasEvents || false;
-    const eventsCount = calendarContent[dateStr]?.events.length || 0;
-    
-    if (hasEventsToday) {
-      return (
-        <div className="relative w-full h-full flex items-center justify-center">
-          <div>{format(date, 'd')}</div>
-          <div className="absolute bottom-1 flex justify-center">
-            <Badge className="text-xs h-4 min-w-4 flex items-center justify-center bg-primary">
-              {eventsCount}
-            </Badge>
-          </div>
-        </div>
-      );
-    }
-    
-    return format(date, 'd');
+  // Gestione selezione evento
+  const handleEventSelect = (calendarEvent: CalendarEvent) => {
+    setSelectedEvent(calendarEvent.originalEvent);
+    setIsDetailsOpen(true);
   };
 
   // Formattazione dell'orario dell'evento
@@ -170,129 +136,180 @@ const Calendar = () => {
     return `${startTime} - ${endTime}`;
   };
 
+  // Formattazione delle date nel calendario
+  const formatWeekdayHeader = (date: Date) => {
+    return format(date, 'EEE', { locale: it });
+  };
+
+  // Gestione cambio visualizzazione
+  const handleViewChange = (view: string) => {
+    setSelectedView(view);
+  };
+
+  // Gestione cambio data
+  const handleNavigate = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  // Personalizzazione del formato del titolo del mese/settimana/giorno
+  const formats = {
+    monthHeaderFormat: (date: Date) => format(date, 'MMMM yyyy', { locale: it }),
+    weekHeaderFormat: ({ start, end }: { start: Date, end: Date }) => {
+      return `${format(start, 'd', { locale: it })} - ${format(end, 'd MMMM yyyy', { locale: it })}`;
+    },
+    dayHeaderFormat: (date: Date) => format(date, 'EEEE d MMMM yyyy', { locale: it }),
+    dayRangeHeaderFormat: ({ start, end }: { start: Date, end: Date }) => {
+      return `${format(start, 'd', { locale: it })} - ${format(end, 'd MMMM yyyy', { locale: it })}`;
+    },
+  };
+
+  // Componente per personalizzare il rendering degli eventi nel calendario
+  const EventComponent = ({ event }: { event: CalendarEvent }) => {
+    const assignedOperators = getOperatorsForEvent(event.id);
+    const hasOperators = assignedOperators.length > 0;
+    
+    return (
+      <div className="p-1 text-xs overflow-hidden">
+        <div className="font-semibold">{event.title}</div>
+        <div>{event.client}</div>
+        {hasOperators && (
+          <div className="text-xs italic">
+            {assignedOperators.length} {assignedOperators.length === 1 ? 'operatore' : 'operatori'}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Classificazione degli eventi per colore (in base al cliente)
+  const eventPropGetter = (event: CalendarEvent) => {
+    const clientName = event.client || '';
+    // Una semplice funzione hash per generare un colore basato sul nome del cliente
+    const hash = clientName.split('').reduce((acc, char) => {
+      return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+    const hue = Math.abs(hash % 360);
+    
+    return {
+      style: {
+        backgroundColor: `hsl(${hue}, 70%, 50%)`,
+        borderColor: `hsl(${hue}, 70%, 40%)`,
+      }
+    };
+  };
+
   return (
     <Layout>
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Calendario Eventi</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col lg:flex-row gap-8">
-            <div className="flex-1">
-              <CalendarComponent
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                month={selectedMonth}
-                onMonthChange={setSelectedMonth}
-                locale={it}
-                className="rounded-md border mx-auto"
-                modifiersClassNames={{
-                  selected: "!bg-primary text-primary-foreground",
-                }}
-                modifiers={{
-                  event: (date) => {
-                    const dateStr = format(date, 'yyyy-MM-dd');
-                    return calendarContent[dateStr]?.hasEvents || false;
-                  }
-                }}
-                components={{
-                  DayContent: ({ date }) => modifyDayContent(date)
-                }}
-              />
+          <div className="h-[calc(100vh-300px)] w-full">
+            <div className="mb-4 flex justify-between items-center">
+              <div className="flex space-x-2">
+                <Button 
+                  variant={selectedView === Views.DAY ? "default" : "outline"} 
+                  onClick={() => handleViewChange(Views.DAY)}
+                >
+                  Giorno
+                </Button>
+                <Button 
+                  variant={selectedView === Views.WEEK ? "default" : "outline"} 
+                  onClick={() => handleViewChange(Views.WEEK)}
+                >
+                  Settimana
+                </Button>
+                <Button 
+                  variant={selectedView === Views.MONTH ? "default" : "outline"} 
+                  onClick={() => handleViewChange(Views.MONTH)}
+                >
+                  Mese
+                </Button>
+              </div>
+              <div>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleNavigate(new Date())}
+                >
+                  Oggi
+                </Button>
+              </div>
             </div>
-            <div className="flex-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Legenda</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className="h-4 min-w-4 flex items-center justify-center bg-primary">1</Badge>
-                      <span>Giorni con eventi</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Clicca su un giorno con eventi per visualizzare i dettagli.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Sommario eventi questo mese */}
-              <Card className="mt-4">
-                <CardHeader>
-                  <CardTitle className="text-lg">
-                    Eventi in {format(selectedMonth, 'MMMM yyyy', { locale: it })}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {Object.values(calendarContent)
-                    .flatMap(day => day.events)
-                    .filter((event, index, self) => 
-                      index === self.findIndex(e => e.id === event.id)
-                    )
-                    .slice(0, 5) // Limite di 5 eventi per non sovraccaricare
-                    .map(event => (
-                      <div key={event.id} className="mb-2 p-2 border rounded-md">
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(event.startDate), 'dd/MM/yyyy')} - {format(new Date(event.endDate), 'dd/MM/yyyy')}
-                        </div>
-                      </div>
-                    ))}
-                  {Object.values(calendarContent)
-                    .flatMap(day => day.events)
-                    .filter((event, index, self) => 
-                      index === self.findIndex(e => e.id === event.id)
-                    ).length > 5 && (
-                    <div className="text-sm text-muted-foreground text-center mt-2">
-                      + altri eventi...
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            
+            <BigCalendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: "100%" }}
+              view={selectedView as any}
+              views={[Views.MONTH, Views.WEEK, Views.DAY]}
+              onView={handleViewChange as any}
+              date={selectedDate}
+              onNavigate={handleNavigate}
+              onSelectEvent={(event: any) => handleEventSelect(event)}
+              formats={formats as any}
+              eventPropGetter={eventPropGetter as any}
+              components={{
+                event: EventComponent as any,
+              }}
+              messages={{
+                today: 'Oggi',
+                previous: 'Precedente',
+                next: 'Successivo',
+                month: 'Mese',
+                week: 'Settimana',
+                day: 'Giorno',
+                agenda: 'Agenda',
+                date: 'Data',
+                time: 'Ora',
+                event: 'Evento',
+                noEventsInRange: 'Nessun evento in questo periodo',
+                showMore: (total: number) => `+ Altri ${total}`,
+              }}
+            />
           </div>
         </CardContent>
       </Card>
 
-      {/* Dialog dettagli eventi del giorno */}
+      {/* Dialog dettagli evento */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
-              Eventi del {selectedDate ? format(selectedDate, 'd MMMM yyyy', { locale: it }) : ''}
+              {selectedEvent?.title}
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-6 p-2">
-              {selectedEvents.map((event) => (
-                <div 
-                  key={event.id}
-                  className="p-4 border rounded-md"
-                >
-                  <h3 className="text-lg font-semibold">{event.title}</h3>
+          {selectedEvent && (
+            <ScrollArea className="max-h-[60vh]">
+              <div className="space-y-6 p-2">
+                <div className="p-4 border rounded-md">
+                  <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
                   <div className="mt-2 space-y-2 text-sm">
                     <div className="flex justify-between">
+                      <span className="text-muted-foreground">Data:</span>
+                      <span>{format(new Date(selectedEvent.startDate), 'dd/MM/yyyy')} - {format(new Date(selectedEvent.endDate), 'dd/MM/yyyy')}</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Orario:</span>
-                      <span>{formatEventTime(event)}</span>
+                      <span>{formatEventTime(selectedEvent)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Cliente:</span>
-                      <span>{event.client}</span>
+                      <span>{selectedEvent.client}</span>
                     </div>
-                    {event.location && (
+                    {selectedEvent.location && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Luogo:</span>
-                        <span>{event.location}</span>
+                        <span>{selectedEvent.location}</span>
                       </div>
                     )}
-                    {event.address && (
+                    {selectedEvent.address && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Indirizzo:</span>
-                        <span>{event.address}</span>
+                        <span>{selectedEvent.address}</span>
                       </div>
                     )}
                   </div>
@@ -301,9 +318,9 @@ const Calendar = () => {
                   <div className="mt-4">
                     <h4 className="font-medium text-sm">Operatori assegnati:</h4>
                     <div className="mt-2">
-                      {getOperatorsForEvent(event.id).length > 0 ? (
+                      {getOperatorsForEvent(selectedEvent.id).length > 0 ? (
                         <div className="space-y-2">
-                          {getOperatorsForEvent(event.id).map(operator => (
+                          {getOperatorsForEvent(selectedEvent.id).map(operator => (
                             <div key={operator.id} className="flex items-center justify-between text-sm">
                               <span>{operator.name}</span>
                               <span className="text-muted-foreground">{operator.phone}</span>
@@ -318,9 +335,9 @@ const Calendar = () => {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          )}
           
           <DialogFooter>
             <Button onClick={() => setIsDetailsOpen(false)}>
