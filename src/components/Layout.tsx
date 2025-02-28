@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,6 +32,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Button variant="outline">
                 <Calendar className="mr-2 h-4 w-4" />
                 Eventi
+              </Button>
+            </Link>
+            <Link to="/calendar">
+              <Button variant="outline">
+                <Calendar className="mr-2 h-4 w-4" />
+                Calendario
               </Button>
             </Link>
             <Button variant="outline" onClick={logout}>

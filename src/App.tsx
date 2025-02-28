@@ -8,6 +8,7 @@ import Operators from "./pages/Operators";
 import Clients from "./pages/Clients";
 import Events from "./pages/Events";
 import EventCreate from "./pages/EventCreate";
+import Calendar from "./pages/Calendar";
 import Index from "./pages/Index";
 
 function App() {
@@ -53,6 +54,14 @@ function App() {
           element={
             <ProtectedRoute>
               <EventCreate />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <Calendar />
             </ProtectedRoute>
           }
         />
