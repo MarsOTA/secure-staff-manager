@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { Plus, Pencil, Trash2, UserCheck, UserX, CalendarClock } from "lucide-react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
@@ -34,6 +34,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Event } from "./Events";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 interface Operator {
   id: number;
@@ -41,7 +44,12 @@ interface Operator {
   email: string;
   phone: string;
   status: "active" | "inactive";
+  assignedEvents?: number[]; // IDs degli eventi assegnati
 }
+
+// Chiave per il localStorage
+const EVENTS_STORAGE_KEY = "app_events_data";
+const OPERATORS_STORAGE_KEY = "app_operators_data";
 
 const Operators = () => {
   const [operators, setOperators] = useState<Operator[]>([
@@ -51,6 +59,7 @@ const Operators = () => {
       email: "mario.rossi@example.com",
       phone: "+39 123 456 7890",
       status: "active",
+      assignedEvents: [],
     },
     {
       id: 2,
@@ -58,17 +67,64 @@ const Operators = () => {
       email: "luigi.verdi@example.com",
       phone: "+39 098 765 4321",
       status: "inactive",
+      assignedEvents: [],
     },
   ]);
 
+  const [events, setEvents] = useState<Event[]>([]);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState<Operator | null>(null);
+  const [assigningOperator, setAssigningOperator] = useState<Operator | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     status: "active" as "active" | "inactive",
   });
+
+  // Carica gli operatori e gli eventi all'avvio
+  useEffect(() => {
+    // Carica operatori dal localStorage se esistono
+    const storedOperators = localStorage.getItem(OPERATORS_STORAGE_KEY);
+    if (storedOperators) {
+      try {
+        setOperators(JSON.parse(storedOperators));
+      } catch (error) {
+        console.error("Errore nel caricamento degli operatori:", error);
+      }
+    } else {
+      // Salva gli operatori predefiniti nel localStorage
+      localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
+    }
+    
+    // Carica eventi
+    const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
+    if (storedEvents) {
+      try {
+        const parsedEvents = JSON.parse(storedEvents);
+        const eventsWithDates = parsedEvents.map((event: any) => ({
+          ...event,
+          startDate: new Date(event.startDate),
+          endDate: new Date(event.endDate)
+        }));
+        setEvents(eventsWithDates);
+      } catch (error) {
+        console.error("Errore nel caricamento degli eventi:", error);
+        setEvents([]);
+      }
+    } else {
+      setEvents([]);
+    }
+  }, []);
+  
+  // Salva gli operatori nel localStorage quando cambiano
+  useEffect(() => {
+    localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
+  }, [operators]);
 
   const handleStatusToggle = (id: number) => {
     setOperators((prev) =>
@@ -126,12 +182,84 @@ const Operators = () => {
       const newId = Math.max(0, ...operators.map((op) => op.id)) + 1;
       setOperators((prev) => [
         ...prev,
-        { id: newId, ...formData },
+        { id: newId, ...formData, assignedEvents: [] },
       ]);
       toast.success("Nuovo operatore aggiunto con successo");
     }
     
     setIsDialogOpen(false);
+  };
+  
+  // Gestione assegnazione operatore a evento
+  const openAssignDialog = (operator: Operator) => {
+    setAssigningOperator(operator);
+    setSelectedEventId("");
+    setIsAssignDialogOpen(true);
+  };
+  
+  const handleAssignSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!assigningOperator || !selectedEventId) {
+      toast.error("Seleziona un evento");
+      return;
+    }
+    
+    const eventId = parseInt(selectedEventId);
+    
+    // Aggiorna l'operatore con l'evento assegnato
+    setOperators((prev) =>
+      prev.map((op) => {
+        if (op.id === assigningOperator.id) {
+          const currentAssignedEvents = op.assignedEvents || [];
+          // Verifica se l'evento è già assegnato
+          if (currentAssignedEvents.includes(eventId)) {
+            toast.info("Operatore già assegnato a questo evento");
+            return op;
+          }
+          
+          return {
+            ...op,
+            assignedEvents: [...currentAssignedEvents, eventId]
+          };
+        }
+        return op;
+      })
+    );
+    
+    // Trova il nome dell'evento per il messaggio di toast
+    const eventName = events.find(e => e.id === eventId)?.title || "Evento selezionato";
+    
+    toast.success(`${assigningOperator.name} assegnato a "${eventName}"`);
+    setIsAssignDialogOpen(false);
+  };
+  
+  // Formatta data e ora per visualizzazione
+  const formatDateRange = (start: Date, end: Date) => {
+    const sameDay = start.getDate() === end.getDate() && 
+                    start.getMonth() === end.getMonth() && 
+                    start.getFullYear() === end.getFullYear();
+    
+    const startDateStr = format(start, "d MMMM yyyy", { locale: it });
+    const endDateStr = format(end, "d MMMM yyyy", { locale: it });
+    const startTimeStr = format(start, "HH:mm");
+    const endTimeStr = format(end, "HH:mm");
+    
+    if (sameDay) {
+      return `${startDateStr}, ${startTimeStr} - ${endTimeStr}`;
+    } else {
+      return `Dal ${startDateStr}, ${startTimeStr} al ${endDateStr}, ${endTimeStr}`;
+    }
+  };
+  
+  // Ottiene gli eventi assegnati a un operatore
+  const getAssignedEvents = (operatorId: number) => {
+    const operator = operators.find(op => op.id === operatorId);
+    if (!operator || !operator.assignedEvents || operator.assignedEvents.length === 0) {
+      return [];
+    }
+    
+    return events.filter(event => operator.assignedEvents?.includes(event.id));
   };
 
   return (
@@ -152,6 +280,7 @@ const Operators = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Telefono</TableHead>
                 <TableHead>Stato</TableHead>
+                <TableHead>Eventi Assegnati</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
@@ -172,12 +301,30 @@ const Operators = () => {
                       {operator.status === "active" ? "Attivo" : "Inattivo"}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    {getAssignedEvents(operator.id).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {getAssignedEvents(operator.id).map((event) => (
+                          <span 
+                            key={event.id}
+                            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800"
+                            title={formatDateRange(event.startDate, event.endDate)}
+                          >
+                            {event.title}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Nessun evento</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => handleStatusToggle(operator.id)}
+                        title={operator.status === "active" ? "Disattiva operatore" : "Attiva operatore"}
                       >
                         {operator.status === "active" ? (
                           <UserX className="h-4 w-4" />
@@ -189,13 +336,23 @@ const Operators = () => {
                         variant="outline" 
                         size="icon"
                         onClick={() => openEditDialog(operator)}
+                        title="Modifica operatore"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
+                        onClick={() => openAssignDialog(operator)}
+                        title="Assegna a evento"
+                      >
+                        <CalendarClock className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleDelete(operator.id)}
+                        title="Elimina operatore"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -208,6 +365,7 @@ const Operators = () => {
         </CardContent>
       </Card>
 
+      {/* Dialog per aggiungere/modificare operatore */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -277,6 +435,87 @@ const Operators = () => {
             <DialogFooter>
               <Button type="submit">
                 {editingOperator ? "Aggiorna" : "Aggiungi"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog per assegnare operatore a evento */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Assegna {assigningOperator?.name} a un evento
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAssignSubmit}>
+            <div className="grid gap-4 py-4">
+              <Label htmlFor="event" className="font-medium">
+                Seleziona evento
+              </Label>
+              <Select
+                value={selectedEventId}
+                onValueChange={setSelectedEventId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleziona un evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {events.length > 0 ? (
+                    events.map((event) => (
+                      <SelectItem key={event.id} value={event.id.toString()}>
+                        {event.title}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-events" disabled>
+                      Nessun evento disponibile
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              
+              {selectedEventId && events.length > 0 && (
+                <div className="mt-4 p-4 bg-muted rounded-md">
+                  {(() => {
+                    const event = events.find(e => e.id.toString() === selectedEventId);
+                    if (!event) return null;
+                    
+                    return (
+                      <div className="space-y-2">
+                        <div className="font-medium">{event.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Cliente: {event.client}
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Data e ora: </span>
+                          {formatDateRange(event.startDate, event.endDate)}
+                        </div>
+                        {event.location && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Località: </span>
+                            {event.location}
+                          </div>
+                        )}
+                        {event.address && (
+                          <div className="text-sm">
+                            <span className="text-muted-foreground">Indirizzo: </span>
+                            {event.address}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setIsAssignDialogOpen(false)}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={!selectedEventId || events.length === 0}>
+                Assegna
               </Button>
             </DialogFooter>
           </form>
