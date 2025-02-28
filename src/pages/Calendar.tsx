@@ -170,10 +170,10 @@ const Calendar = () => {
     
     return (
       <div className="p-1 text-xs overflow-hidden">
-        <div className="font-semibold">{event.title}</div>
-        <div>{event.client}</div>
+        <div className="font-semibold truncate">{event.title}</div>
+        <div className="truncate">{event.client}</div>
         {hasOperators && (
-          <div className="text-xs italic">
+          <div className="text-xs italic truncate">
             {assignedOperators.length} {assignedOperators.length === 1 ? 'operatore' : 'operatori'}
           </div>
         )}
@@ -200,29 +200,35 @@ const Calendar = () => {
 
   return (
     <Layout>
-      <Card className="mb-8">
-        <CardHeader>
+      <Card className="overflow-hidden mb-8">
+        <CardHeader className="pb-2">
           <CardTitle>Calendario Eventi</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[calc(100vh-300px)] w-full">
-            <div className="mb-4 flex justify-between items-center">
+        <CardContent className="p-0 sm:p-4">
+          <div className="w-full" style={{ height: "calc(100vh - 240px)" }}>
+            <div className="mb-2 mt-2 px-4 flex justify-between items-center">
               <div className="flex space-x-2">
                 <Button 
                   variant={selectedView === Views.DAY ? "default" : "outline"} 
                   onClick={() => handleViewChange(Views.DAY)}
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
                   Giorno
                 </Button>
                 <Button 
                   variant={selectedView === Views.WEEK ? "default" : "outline"} 
                   onClick={() => handleViewChange(Views.WEEK)}
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
                   Settimana
                 </Button>
                 <Button 
                   variant={selectedView === Views.MONTH ? "default" : "outline"} 
                   onClick={() => handleViewChange(Views.MONTH)}
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
                   Mese
                 </Button>
@@ -231,44 +237,86 @@ const Calendar = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => handleNavigate(new Date())}
+                  size="sm"
+                  className="text-xs sm:text-sm"
                 >
                   Oggi
                 </Button>
               </div>
             </div>
             
-            <BigCalendar
-              localizer={localizer}
-              events={calendarEvents}
-              startAccessor="start"
-              endAccessor="end"
-              style={{ height: "100%" }}
-              view={selectedView as any}
-              views={[Views.MONTH, Views.WEEK, Views.DAY]}
-              onView={handleViewChange as any}
-              date={selectedDate}
-              onNavigate={handleNavigate}
-              onSelectEvent={(event: any) => handleEventSelect(event)}
-              formats={formats as any}
-              eventPropGetter={eventPropGetter as any}
-              components={{
-                event: EventComponent as any,
-              }}
-              messages={{
-                today: 'Oggi',
-                previous: 'Precedente',
-                next: 'Successivo',
-                month: 'Mese',
-                week: 'Settimana',
-                day: 'Giorno',
-                agenda: 'Agenda',
-                date: 'Data',
-                time: 'Ora',
-                event: 'Evento',
-                noEventsInRange: 'Nessun evento in questo periodo',
-                showMore: (total: number) => `+ Altri ${total}`,
-              }}
-            />
+            <div className="calendar-container h-full pb-4 px-2 sm:px-4">
+              <style jsx global>{`
+                .rbc-calendar {
+                  width: 100%;
+                  height: 100%;
+                  min-height: 580px;
+                }
+                .rbc-header {
+                  padding: 4px 2px;
+                  font-size: 0.875rem;
+                  overflow: hidden;
+                  white-space: nowrap;
+                  text-overflow: ellipsis;
+                }
+                .rbc-event {
+                  border-radius: 4px;
+                  padding: 2px 4px;
+                  border: none;
+                }
+                @media (max-width: 640px) {
+                  .rbc-toolbar {
+                    font-size: 0.75rem;
+                    flex-direction: column;
+                  }
+                  .rbc-toolbar-label {
+                    padding: 8px 0;
+                  }
+                  .rbc-header {
+                    font-size: 0.75rem;
+                    padding: 3px 1px;
+                  }
+                  .rbc-btn-group button {
+                    padding: 4px 8px;
+                  }
+                  .rbc-day-slot .rbc-events-container {
+                    margin-right: 0;
+                  }
+                }
+              `}</style>
+              <BigCalendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: "100%" }}
+                view={selectedView as any}
+                views={[Views.MONTH, Views.WEEK, Views.DAY]}
+                onView={handleViewChange as any}
+                date={selectedDate}
+                onNavigate={handleNavigate}
+                onSelectEvent={(event: any) => handleEventSelect(event)}
+                formats={formats as any}
+                eventPropGetter={eventPropGetter as any}
+                components={{
+                  event: EventComponent as any,
+                }}
+                messages={{
+                  today: 'Oggi',
+                  previous: 'Prec',
+                  next: 'Succ',
+                  month: 'Mese',
+                  week: 'Sett',
+                  day: 'Giorno',
+                  agenda: 'Agenda',
+                  date: 'Data',
+                  time: 'Ora',
+                  event: 'Evento',
+                  noEventsInRange: 'Nessun evento',
+                  showMore: (total: number) => `+${total}`,
+                }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
