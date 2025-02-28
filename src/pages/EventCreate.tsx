@@ -45,6 +45,36 @@ interface PlacePrediction {
   place_id: string;
 }
 
+// Dichiarazione dei tipi per Google Maps API
+declare global {
+  interface Window {
+    google: {
+      maps: {
+        places: {
+          AutocompleteService: new () => {
+            getPlacePredictions: (
+              request: { input: string; types?: string[] },
+              callback: (
+                predictions: PlacePrediction[] | null,
+                status: string
+              ) => void
+            ) => void;
+          };
+          PlacesServiceStatus: {
+            OK: string;
+            ZERO_RESULTS: string;
+            OVER_QUERY_LIMIT: string;
+            REQUEST_DENIED: string;
+            INVALID_REQUEST: string;
+            UNKNOWN_ERROR: string;
+          };
+        };
+      };
+    };
+    initGoogleMapsCallback: () => void;
+  }
+}
+
 const EventCreate = () => {
   const navigate = useNavigate();
   const locationHook = useLocation();
@@ -67,7 +97,7 @@ const EventCreate = () => {
   
   // Ref per lo script di Google Maps
   const googleScriptLoaded = useRef(false);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const autocompleteService = useRef<any>(null);
   
   // Carica lo script di Google Maps
   useEffect(() => {
@@ -167,8 +197,8 @@ const EventCreate = () => {
           input: value,
           types: ['(cities)'] // Limita i risultati a città
         },
-        (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        (predictions: PlacePrediction[] | null, status: string) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
             setLocationSuggestions(predictions);
             setShowSuggestions(true);
           } else {
@@ -455,13 +485,5 @@ const EventCreate = () => {
     </Layout>
   );
 };
-
-// Aggiungi la dichiarazione del tipo per la callback di Google Maps
-declare global {
-  interface Window {
-    google: typeof google;
-    initGoogleMapsCallback: () => void;
-  }
-}
 
 export default EventCreate;
