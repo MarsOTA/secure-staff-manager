@@ -33,6 +33,7 @@ export interface Event {
   endDate: Date;
   personnelTypes: string[];
   location?: string; // Campo località, opzionale per retrocompatibilità
+  address?: string; // Campo indirizzo, opzionale per retrocompatibilità
 }
 
 // Chiave per il localStorage
@@ -269,6 +270,13 @@ const Events = () => {
                   <p className="text-base">{selectedEvent.location || "Non specificata"}</p>
                 </div>
               </div>
+              
+              {selectedEvent.address && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Indirizzo</h4>
+                  <p className="text-base">{selectedEvent.address}</p>
+                </div>
+              )}
               
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Data e Ora</h4>

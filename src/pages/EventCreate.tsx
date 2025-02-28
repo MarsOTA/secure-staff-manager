@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Calendar as CalendarIcon, ArrowLeft, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, MapPin, Building } from "lucide-react";
 import { toast } from "sonner";
 import { Event } from "./Events";
 
@@ -92,8 +92,11 @@ const EventCreate = () => {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
   const [eventLocation, setEventLocation] = useState("");
+  const [eventAddress, setEventAddress] = useState("");
   const [locationSuggestions, setLocationSuggestions] = useState<PlacePrediction[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<PlacePrediction[]>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   
   // Ref per lo script di Google Maps
   const googleScriptLoaded = useRef(false);
@@ -166,6 +169,11 @@ const EventCreate = () => {
             if (eventToEdit.location) {
               setEventLocation(eventToEdit.location);
             }
+            
+            // Imposta l'indirizzo se presente
+            if (eventToEdit.address) {
+              setEventAddress(eventToEdit.address);
+            }
           }
         }
       } catch (error) {
@@ -200,22 +208,54 @@ const EventCreate = () => {
         (predictions: PlacePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
             setLocationSuggestions(predictions);
-            setShowSuggestions(true);
+            setShowLocationSuggestions(true);
           } else {
             setLocationSuggestions([]);
-            setShowSuggestions(false);
+            setShowLocationSuggestions(false);
           }
         }
       );
     } else {
-      setShowSuggestions(false);
+      setShowLocationSuggestions(false);
     }
   };
   
-  // Gestione selezione suggerimento
-  const handleSelectSuggestion = (suggestion: PlacePrediction) => {
+  // Gestione suggerimenti indirizzo con Google Places API
+  const handleAddressChange = (value: string) => {
+    setEventAddress(value);
+    
+    if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
+      // Utilizziamo l'API di Google Places per ottenere suggerimenti di indirizzi
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: value,
+          types: ['address'] // Limita i risultati a indirizzi
+        },
+        (predictions: PlacePrediction[] | null, status: string) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setAddressSuggestions(predictions);
+            setShowAddressSuggestions(true);
+          } else {
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+          }
+        }
+      );
+    } else {
+      setShowAddressSuggestions(false);
+    }
+  };
+  
+  // Gestione selezione suggerimento località
+  const handleSelectLocationSuggestion = (suggestion: PlacePrediction) => {
     setEventLocation(suggestion.description);
-    setShowSuggestions(false);
+    setShowLocationSuggestions(false);
+  };
+  
+  // Gestione selezione suggerimento indirizzo
+  const handleSelectAddressSuggestion = (suggestion: PlacePrediction) => {
+    setEventAddress(suggestion.description);
+    setShowAddressSuggestions(false);
   };
   
   // Gestione invio form
@@ -261,7 +301,8 @@ const EventCreate = () => {
               startDate: fullStartDate,
               endDate: fullEndDate,
               personnelTypes: selectedPersonnel,
-              location: eventLocation
+              location: eventLocation,
+              address: eventAddress
             };
           }
           return event;
@@ -282,7 +323,8 @@ const EventCreate = () => {
           startDate: fullStartDate,
           endDate: fullEndDate,
           personnelTypes: selectedPersonnel,
-          location: eventLocation
+          location: eventLocation,
+          address: eventAddress
         };
         
         // Aggiungiamo il nuovo evento alla lista e salviamo
@@ -376,7 +418,7 @@ const EventCreate = () => {
                     </div>
                     <Input 
                       id="eventLocation" 
-                      placeholder="Inserisci località evento" 
+                      placeholder="Inserisci località evento (città)" 
                       value={eventLocation}
                       onChange={(e) => handleLocationChange(e.target.value)}
                       className="pl-10"
@@ -385,14 +427,14 @@ const EventCreate = () => {
                 </div>
                 
                 {/* Suggerimenti località da Google Maps */}
-                {showSuggestions && locationSuggestions.length > 0 && (
+                {showLocationSuggestions && locationSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
                     <ul className="py-1">
                       {locationSuggestions.map((suggestion) => (
                         <li 
                           key={suggestion.place_id}
                           className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-                          onClick={() => handleSelectSuggestion(suggestion)}
+                          onClick={() => handleSelectLocationSuggestion(suggestion)}
                         >
                           {suggestion.description}
                         </li>
@@ -403,6 +445,47 @@ const EventCreate = () => {
               </div>
               <p className="text-sm text-muted-foreground">
                 Inizia a digitare per vedere i suggerimenti (minimo 3 caratteri)
+              </p>
+            </div>
+            
+            {/* Indirizzo evento con suggerimenti Google Maps */}
+            <div className="space-y-2">
+              <Label htmlFor="eventAddress">Indirizzo evento</Label>
+              <div className="relative">
+                <div className="flex">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Building className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="eventAddress" 
+                      placeholder="Inserisci indirizzo specifico dell'evento" 
+                      value={eventAddress}
+                      onChange={(e) => handleAddressChange(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                {/* Suggerimenti indirizzo da Google Maps */}
+                {showAddressSuggestions && addressSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
+                    <ul className="py-1">
+                      {addressSuggestions.map((suggestion) => (
+                        <li 
+                          key={suggestion.place_id}
+                          className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleSelectAddressSuggestion(suggestion)}
+                        >
+                          {suggestion.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Inserisci l'indirizzo completo dell'evento (via, numero civico, ecc.)
               </p>
             </div>
             
