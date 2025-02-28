@@ -141,26 +141,26 @@ const Calendar = () => {
     }
   };
 
-  // Personalizzazione dei giorni nel calendario
-  const dayRender = (day: Date, selectedDays: Date[], props: Record<string, any>) => {
-    const dateStr = format(day, 'yyyy-MM-dd');
+  // Funzione per generare il contenuto modifidato per i giorni del calendario
+  const modifyDayContent = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
     const hasEventsToday = calendarContent[dateStr]?.hasEvents || false;
     const eventsCount = calendarContent[dateStr]?.events.length || 0;
     
-    return (
-      <div className="relative w-full h-full">
-        <div {...props}>
-          {format(day, 'd')}
-          {hasEventsToday && (
-            <div className="absolute bottom-1 left-0 right-0 flex justify-center">
-              <Badge className="text-xs h-4 min-w-4 flex items-center justify-center bg-primary">
-                {eventsCount}
-              </Badge>
-            </div>
-          )}
+    if (hasEventsToday) {
+      return (
+        <div className="relative w-full h-full flex items-center justify-center">
+          <div>{format(date, 'd')}</div>
+          <div className="absolute bottom-1 flex justify-center">
+            <Badge className="text-xs h-4 min-w-4 flex items-center justify-center bg-primary">
+              {eventsCount}
+            </Badge>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    
+    return format(date, 'd');
   };
 
   // Formattazione dell'orario dell'evento
@@ -187,8 +187,17 @@ const Calendar = () => {
                 onMonthChange={setSelectedMonth}
                 locale={it}
                 className="rounded-md border mx-auto"
+                modifiersClassNames={{
+                  selected: "!bg-primary text-primary-foreground",
+                }}
+                modifiers={{
+                  event: (date) => {
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    return calendarContent[dateStr]?.hasEvents || false;
+                  }
+                }}
                 components={{
-                  Day: ({ day, selectedDays, ...props }) => dayRender(day, selectedDays, props)
+                  DayContent: ({ date }) => modifyDayContent(date)
                 }}
               />
             </div>
