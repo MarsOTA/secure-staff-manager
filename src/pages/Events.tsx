@@ -34,6 +34,12 @@ export interface Event {
   personnelTypes: string[];
   location?: string; // Campo località, opzionale per retrocompatibilità
   address?: string; // Campo indirizzo, opzionale per retrocompatibilità
+  grossHours?: number; // Ore lorde previste
+  breakStartTime?: string; // Orario inizio pausa
+  breakEndTime?: string; // Orario fine pausa
+  netHours?: number; // Ore nette previste
+  hourlyRateCost?: number; // €/h operatore (costo)
+  hourlyRateSell?: number; // €/h operatore (prezzo di vendita)
 }
 
 // Chiave per il localStorage

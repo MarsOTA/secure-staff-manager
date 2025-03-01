@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,18 +16,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Calendar as CalendarIcon, ArrowLeft, MapPin, Building } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, MapPin, Building, Clock, Euro } from "lucide-react";
 import { toast } from "sonner";
 import { Event } from "./Events";
 
-// Tipo di personale con etichette
 const personnelTypes = [
   { id: "security", label: "Security" },
   { id: "doorman", label: "Doorman" },
   { id: "hostess", label: "Hostess/Steward" },
 ];
 
-// Clienti fittizi
 const clients = [
   { id: 1, name: "Rock Productions" },
   { id: 2, name: "MediaGroup" },
@@ -36,16 +33,13 @@ const clients = [
   { id: 4, name: "Sport Events" },
 ];
 
-// Chiave per il localStorage
 const EVENTS_STORAGE_KEY = "app_events_data";
 
-// Interfaccia per i risultati di Google Places API
 interface PlacePrediction {
   description: string;
   place_id: string;
 }
 
-// Dichiarazione dei tipi per Google Maps API
 declare global {
   interface Window {
     google: {
@@ -79,11 +73,9 @@ const EventCreate = () => {
   const navigate = useNavigate();
   const locationHook = useLocation();
   
-  // Recupera l'ID dell'evento da modificare (se presente)
   const eventId = new URLSearchParams(locationHook.search).get("id");
   const isEditMode = !!eventId;
   
-  // Stati per il form
   const [title, setTitle] = useState("");
   const [client, setClient] = useState("");
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
@@ -98,14 +90,18 @@ const EventCreate = () => {
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   
-  // Ref per lo script di Google Maps
+  const [grossHours, setGrossHours] = useState("");
+  const [breakStartTime, setBreakStartTime] = useState("13:00");
+  const [breakEndTime, setBreakEndTime] = useState("14:00");
+  const [netHours, setNetHours] = useState("");
+  const [hourlyRateCost, setHourlyRateCost] = useState("");
+  const [hourlyRateSell, setHourlyRateSell] = useState("");
+  
   const googleScriptLoaded = useRef(false);
   const autocompleteService = useRef<any>(null);
   
-  // Carica lo script di Google Maps
   useEffect(() => {
     if (!googleScriptLoaded.current) {
-      // Callback quando lo script è caricato
       const initGoogleMapsServices = () => {
         if (window.google && window.google.maps && window.google.maps.places) {
           autocompleteService.current = new window.google.maps.places.AutocompleteService();
@@ -114,28 +110,22 @@ const EventCreate = () => {
         }
       };
 
-      // Crea lo script per Google Maps API
       const googleMapsScript = document.createElement("script");
       googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC0HttgvqRiRYKBoRh_pnUsyqem4AqO1zY&libraries=places&callback=initGoogleMapsCallback`;
       googleMapsScript.async = true;
       googleMapsScript.defer = true;
       
-      // Aggiungi la callback globale
       window.initGoogleMapsCallback = initGoogleMapsServices;
       
-      // Aggiungi lo script al DOM
       document.head.appendChild(googleMapsScript);
       
-      // Cleanup
       return () => {
-        // Rimuovi lo script e la callback globale
         document.head.removeChild(googleMapsScript);
         delete window.initGoogleMapsCallback;
       };
     }
   }, []);
   
-  // Carica i dati dell'evento se siamo in modalità modifica
   useEffect(() => {
     if (isEditMode) {
       try {
@@ -150,10 +140,8 @@ const EventCreate = () => {
           const eventToEdit = events.find(e => e.id === Number(eventId));
           
           if (eventToEdit) {
-            // Popola i campi del form con i dati dell'evento
             setTitle(eventToEdit.title);
             
-            // Trova l'ID del cliente dal nome
             const clientObject = clients.find(c => c.name === eventToEdit.client);
             if (clientObject) {
               setClient(clientObject.id.toString());
@@ -165,14 +153,36 @@ const EventCreate = () => {
             setStartTime(format(eventToEdit.startDate, "HH:mm"));
             setEndTime(format(eventToEdit.endDate, "HH:mm"));
             
-            // Imposta la località se presente
             if (eventToEdit.location) {
               setEventLocation(eventToEdit.location);
             }
             
-            // Imposta l'indirizzo se presente
             if (eventToEdit.address) {
               setEventAddress(eventToEdit.address);
+            }
+            
+            if (eventToEdit.grossHours) {
+              setGrossHours(eventToEdit.grossHours.toString());
+            }
+            
+            if (eventToEdit.breakStartTime) {
+              setBreakStartTime(eventToEdit.breakStartTime);
+            }
+            
+            if (eventToEdit.breakEndTime) {
+              setBreakEndTime(eventToEdit.breakEndTime);
+            }
+            
+            if (eventToEdit.netHours) {
+              setNetHours(eventToEdit.netHours.toString());
+            }
+            
+            if (eventToEdit.hourlyRateCost) {
+              setHourlyRateCost(eventToEdit.hourlyRateCost.toString());
+            }
+            
+            if (eventToEdit.hourlyRateSell) {
+              setHourlyRateSell(eventToEdit.hourlyRateSell.toString());
             }
           }
         }
@@ -183,7 +193,6 @@ const EventCreate = () => {
     }
   }, [eventId, isEditMode]);
   
-  // Gestione personale selezionato
   const handlePersonnelChange = (personnelId: string) => {
     setSelectedPersonnel((current) => {
       if (current.includes(personnelId)) {
@@ -194,16 +203,14 @@ const EventCreate = () => {
     });
   };
   
-  // Gestione suggerimenti località con Google Places API
   const handleLocationChange = (value: string) => {
     setEventLocation(value);
     
     if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
-      // Utilizziamo l'API di Google Places per ottenere suggerimenti
       autocompleteService.current.getPlacePredictions(
         {
           input: value,
-          types: ['(cities)'] // Limita i risultati a città
+          types: ['(cities)']
         },
         (predictions: PlacePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -220,16 +227,14 @@ const EventCreate = () => {
     }
   };
   
-  // Gestione suggerimenti indirizzo con Google Places API
   const handleAddressChange = (value: string) => {
     setEventAddress(value);
     
     if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
-      // Utilizziamo l'API di Google Places per ottenere suggerimenti di indirizzi
       autocompleteService.current.getPlacePredictions(
         {
           input: value,
-          types: ['address'] // Limita i risultati a indirizzi
+          types: ['address']
         },
         (predictions: PlacePrediction[] | null, status: string) => {
           if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
@@ -246,40 +251,51 @@ const EventCreate = () => {
     }
   };
   
-  // Gestione selezione suggerimento località
   const handleSelectLocationSuggestion = (suggestion: PlacePrediction) => {
     setEventLocation(suggestion.description);
     setShowLocationSuggestions(false);
   };
   
-  // Gestione selezione suggerimento indirizzo
   const handleSelectAddressSuggestion = (suggestion: PlacePrediction) => {
     setEventAddress(suggestion.description);
     setShowAddressSuggestions(false);
   };
   
-  // Gestione invio form
+  useEffect(() => {
+    if (grossHours) {
+      const breakStart = breakStartTime.split(':').map(Number);
+      const breakEnd = breakEndTime.split(':').map(Number);
+      
+      const breakStartMinutes = breakStart[0] * 60 + breakStart[1];
+      const breakEndMinutes = breakEnd[0] * 60 + breakEnd[1];
+      
+      const breakDurationHours = (breakEndMinutes - breakStartMinutes) / 60;
+      
+      const netHoursValue = Math.max(0, Number(grossHours) - breakDurationHours);
+      
+      setNetHours(netHoursValue.toFixed(2));
+    } else {
+      setNetHours("");
+    }
+  }, [grossHours, breakStartTime, breakEndTime]);
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validazione base
     if (!title || !client || selectedPersonnel.length === 0 || !startDate || !endDate) {
       toast.error("Compila tutti i campi obbligatori");
       return;
     }
     
-    // Creazione oggetto evento completo
     const fullStartDate = combineDateTime(startDate, startTime);
     const fullEndDate = combineDateTime(endDate, endTime);
     
-    // Validazione date
     if (fullEndDate <= fullStartDate) {
       toast.error("La data di fine deve essere successiva alla data di inizio");
       return;
     }
 
     try {
-      // Carichiamo gli eventi esistenti dal localStorage
       const existingEventsJson = localStorage.getItem(EVENTS_STORAGE_KEY) || "[]";
       const existingEvents: Event[] = JSON.parse(existingEventsJson).map((event: any) => ({
         ...event,
@@ -287,11 +303,18 @@ const EventCreate = () => {
         endDate: new Date(event.endDate)
       }));
       
-      // Troviamo il nome del cliente dal suo ID
       const selectedClient = clients.find(c => c.id.toString() === client);
       
+      const additionalData = {
+        grossHours: grossHours ? Number(grossHours) : undefined,
+        breakStartTime: breakStartTime || undefined,
+        breakEndTime: breakEndTime || undefined,
+        netHours: netHours ? Number(netHours) : undefined,
+        hourlyRateCost: hourlyRateCost ? Number(hourlyRateCost) : undefined,
+        hourlyRateSell: hourlyRateSell ? Number(hourlyRateSell) : undefined
+      };
+      
       if (isEditMode) {
-        // Aggiornamento evento esistente
         const updatedEvents = existingEvents.map(event => {
           if (event.id === Number(eventId)) {
             return {
@@ -302,7 +325,8 @@ const EventCreate = () => {
               endDate: fullEndDate,
               personnelTypes: selectedPersonnel,
               location: eventLocation,
-              address: eventAddress
+              address: eventAddress,
+              ...additionalData
             };
           }
           return event;
@@ -311,11 +335,8 @@ const EventCreate = () => {
         localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
         toast.success("Evento aggiornato con successo!");
       } else {
-        // Creazione nuovo evento
-        // Troviamo l'ID più alto per assegnare un nuovo ID
         const maxId = existingEvents.reduce((max, event) => Math.max(max, event.id), 0);
         
-        // Creiamo il nuovo evento
         const newEvent: Event = {
           id: maxId + 1,
           title,
@@ -324,10 +345,10 @@ const EventCreate = () => {
           endDate: fullEndDate,
           personnelTypes: selectedPersonnel,
           location: eventLocation,
-          address: eventAddress
+          address: eventAddress,
+          ...additionalData
         };
         
-        // Aggiungiamo il nuovo evento alla lista e salviamo
         const updatedEvents = [...existingEvents, newEvent];
         localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
         
@@ -341,7 +362,6 @@ const EventCreate = () => {
     }
   };
   
-  // Funzione per combinare data e ora
   const combineDateTime = (date: Date | undefined, timeString: string): Date => {
     if (!date) return new Date();
     
@@ -375,7 +395,6 @@ const EventCreate = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Titolo evento */}
             <div className="space-y-2">
               <Label htmlFor="title">Titolo evento *</Label>
               <Input 
@@ -387,7 +406,6 @@ const EventCreate = () => {
               />
             </div>
             
-            {/* Cliente */}
             <div className="space-y-2">
               <Label htmlFor="client">Cliente *</Label>
               <Select 
@@ -407,7 +425,6 @@ const EventCreate = () => {
               </Select>
             </div>
             
-            {/* Località evento con suggerimenti Google Maps */}
             <div className="space-y-2">
               <Label htmlFor="eventLocation">Località evento</Label>
               <div className="relative">
@@ -426,7 +443,6 @@ const EventCreate = () => {
                   </div>
                 </div>
                 
-                {/* Suggerimenti località da Google Maps */}
                 {showLocationSuggestions && locationSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
                     <ul className="py-1">
@@ -448,7 +464,6 @@ const EventCreate = () => {
               </p>
             </div>
             
-            {/* Indirizzo evento con suggerimenti Google Maps */}
             <div className="space-y-2">
               <Label htmlFor="eventAddress">Indirizzo evento</Label>
               <div className="relative">
@@ -467,7 +482,6 @@ const EventCreate = () => {
                   </div>
                 </div>
                 
-                {/* Suggerimenti indirizzo da Google Maps */}
                 {showAddressSuggestions && addressSuggestions.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto">
                     <ul className="py-1">
@@ -489,7 +503,6 @@ const EventCreate = () => {
               </p>
             </div>
             
-            {/* Tipo di personale */}
             <div className="space-y-2">
               <Label>Tipologia di personale richiesto *</Label>
               <div className="space-y-2">
@@ -508,9 +521,7 @@ const EventCreate = () => {
               </div>
             </div>
             
-            {/* Date e orari */}
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Data e ora inizio */}
               <div className="space-y-2">
                 <Label>Data inizio *</Label>
                 <div className="border rounded-md p-4">
@@ -533,7 +544,6 @@ const EventCreate = () => {
                 </div>
               </div>
               
-              {/* Data e ora fine */}
               <div className="space-y-2">
                 <Label>Data fine *</Label>
                 <div className="border rounded-md p-4">
@@ -551,6 +561,117 @@ const EventCreate = () => {
                       type="time" 
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t border-gray-200">
+              <h3 className="text-lg font-medium mb-4">Informazioni su ore e costi</h3>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="grossHours">Ore lorde previste</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="grossHours" 
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      placeholder="Inserisci ore lorde" 
+                      value={grossHours}
+                      onChange={(e) => setGrossHours(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="netHours">Ore nette previste</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="netHours" 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Calcolato automaticamente" 
+                      value={netHours}
+                      readOnly
+                      className="pl-10 bg-gray-50"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Calcolato automaticamente (ore lorde - pausa)
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2 mt-4">
+                <Label>Pausa prevista</Label>
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <Label htmlFor="breakStartTime" className="text-sm">Da</Label>
+                    <Input 
+                      id="breakStartTime" 
+                      type="time" 
+                      value={breakStartTime}
+                      onChange={(e) => setBreakStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="breakEndTime" className="text-sm">A</Label>
+                    <Input 
+                      id="breakEndTime" 
+                      type="time" 
+                      value={breakEndTime}
+                      onChange={(e) => setBreakEndTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyRateCost">€/h operatore (costo)</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Euro className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="hourlyRateCost" 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Es. 15.00" 
+                      value={hourlyRateCost}
+                      onChange={(e) => setHourlyRateCost(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="hourlyRateSell">€/h operatore (prezzo di vendita)</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <Euro className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <Input 
+                      id="hourlyRateSell" 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Es. 25.00" 
+                      value={hourlyRateSell}
+                      onChange={(e) => setHourlyRateSell(e.target.value)}
+                      className="pl-10"
                     />
                   </div>
                 </div>
