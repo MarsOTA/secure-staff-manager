@@ -245,82 +245,104 @@ const Calendar = () => {
             </div>
             
             <div className="calendar-container h-full pb-4 px-2 sm:px-4">
-              <style dangerouslySetInnerHTML={{ __html: `
-                .rbc-calendar {
-                  width: 100%;
-                  height: 100%;
-                  min-height: 580px;
-                }
-                .rbc-header {
-                  padding: 4px 2px;
-                  font-size: 0.875rem;
-                  overflow: hidden;
-                  white-space: nowrap;
-                  text-overflow: ellipsis;
-                }
-                .rbc-event {
-                  border-radius: 4px;
-                  padding: 2px 4px;
-                  border: none;
-                }
-                .rbc-month-view {
-                  overflow: visible !important;
-                  height: auto !important;
-                }
-                .rbc-month-row {
-                  overflow: visible !important;
-                  height: auto !important;
-                  min-height: 100px;
-                }
-                .rbc-row-bg {
-                  overflow: visible !important;
-                }
-                .rbc-row-content {
-                  overflow: visible !important;
-                  height: auto !important;
-                }
-                .rbc-row {
-                  overflow: visible !important;
-                }
-                .rbc-row-segment {
-                  overflow: visible !important;
-                }
-                .rbc-date-cell {
-                  text-align: center;
-                }
-                .rbc-month-view .rbc-month-row {
-                  position: relative;
-                }
-                .rbc-month-view .rbc-row-content-scrollable {
-                  position: relative;
-                  height: auto !important;
-                }
-                .rbc-month-view .rbc-row-content-scrollable .rbc-row-segment {
-                  padding-right: 0;
-                  margin-right: 0;
-                }
-                .rbc-day-slot .rbc-events-container {
-                  min-height: 100%;
-                }
-                @media (max-width: 640px) {
-                  .rbc-toolbar {
-                    font-size: 0.75rem;
-                    flex-direction: column;
-                  }
-                  .rbc-toolbar-label {
-                    padding: 8px 0;
+              <div dangerouslySetInnerHTML={{ __html: `
+                <style>
+                  .rbc-calendar {
+                    width: 100%;
+                    height: 100%;
+                    min-height: 580px;
                   }
                   .rbc-header {
-                    font-size: 0.75rem;
-                    padding: 3px 1px;
+                    padding: 4px 2px;
+                    font-size: 0.875rem;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
                   }
-                  .rbc-btn-group button {
-                    padding: 4px 8px;
+                  .rbc-event {
+                    border-radius: 4px;
+                    padding: 2px 4px;
+                    border: none;
+                  }
+                  .rbc-month-view {
+                    overflow: visible !important;
+                    height: auto !important;
+                    display: flex;
+                    flex-direction: column;
+                  }
+                  .rbc-month-header {
+                    flex: none;
+                  }
+                  .rbc-month-row {
+                    min-height: 100px;
+                    display: flex;
+                    flex: 1;
+                    position: relative;
+                    overflow: visible !important;
+                  }
+                  .rbc-row-bg {
+                    overflow: visible !important;
+                    flex: 1;
+                    display: flex;
+                  }
+                  .rbc-row-content {
+                    position: relative;
+                    z-index: 4;
+                    overflow: visible !important;
+                  }
+                  .rbc-row {
+                    overflow: visible !important;
+                    display: flex;
+                    flex: 1;
+                  }
+                  .rbc-date-cell {
+                    text-align: center;
+                    padding: 2px;
+                  }
+                  .rbc-show-more {
+                    color: #0066cc;
+                    font-weight: bold;
+                    cursor: pointer;
+                    padding: 0 2px;
                   }
                   .rbc-day-slot .rbc-events-container {
-                    margin-right: 0;
+                    min-height: 100%;
                   }
-                }
+                  .rbc-today {
+                    background-color: rgba(240, 240, 240, 0.5);
+                  }
+                  .rbc-off-range-bg {
+                    background-color: rgba(245, 245, 245, 0.3);
+                  }
+                  .rbc-overlay {
+                    position: absolute;
+                    z-index: 100;
+                    background-color: white;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                    padding: 10px;
+                  }
+                  @media (max-width: 640px) {
+                    .rbc-toolbar {
+                      font-size: 0.75rem;
+                      flex-direction: column;
+                    }
+                    .rbc-toolbar-label {
+                      padding: 8px 0;
+                    }
+                    .rbc-header {
+                      font-size: 0.75rem;
+                      padding: 3px 1px;
+                    }
+                    .rbc-btn-group button {
+                      padding: 4px 8px;
+                    }
+                    .rbc-day-slot .rbc-events-container {
+                      margin-right: 0;
+                    }
+                  }
+                </style>
               `}} />
               <BigCalendar
                 localizer={localizer}
