@@ -264,6 +264,28 @@ const Calendar = () => {
                   padding: 2px 4px;
                   border: none;
                 }
+                .rbc-month-view {
+                  overflow: auto;
+                }
+                .rbc-month-row {
+                  overflow: visible;
+                }
+                .rbc-row-content {
+                  overflow: visible;
+                }
+                .rbc-row-content-scrollable {
+                  overflow-y: auto;
+                }
+                .rbc-row-segment {
+                  overflow: hidden;
+                }
+                .rbc-month-view .rbc-row-content-scrollable .rbc-row-segment {
+                  padding-right: 0;
+                  margin-right: 0;
+                }
+                .rbc-day-slot .rbc-events-container {
+                  min-height: 100%;
+                }
                 @media (max-width: 640px) {
                   .rbc-toolbar {
                     font-size: 0.75rem;
@@ -301,6 +323,8 @@ const Calendar = () => {
                 components={{
                   event: EventComponent as any,
                 }}
+                popup={true}
+                length={80}
                 messages={{
                   today: 'Oggi',
                   previous: 'Prec',
