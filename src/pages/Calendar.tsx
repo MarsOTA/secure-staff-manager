@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
@@ -251,6 +252,8 @@ const Calendar = () => {
                     width: 100%;
                     height: 100%;
                     min-height: 580px;
+                    display: flex;
+                    flex-direction: column;
                   }
                   .rbc-header {
                     padding: 4px 2px;
@@ -265,35 +268,38 @@ const Calendar = () => {
                     border: none;
                   }
                   .rbc-month-view {
-                    overflow: visible !important;
-                    height: auto !important;
+                    flex: 1;
                     display: flex;
                     flex-direction: column;
+                    position: relative;
+                    overflow: auto !important;
+                    height: 100% !important;
+                    min-height: 580px;
                   }
                   .rbc-month-header {
                     flex: none;
                   }
                   .rbc-month-row {
                     min-height: 100px;
-                    display: flex;
                     flex: 1;
+                    overflow: visible;
                     position: relative;
-                    overflow: visible !important;
                   }
                   .rbc-row-bg {
-                    overflow: visible !important;
                     flex: 1;
                     display: flex;
+                    overflow: visible;
                   }
                   .rbc-row-content {
                     position: relative;
                     z-index: 4;
-                    overflow: visible !important;
+                    overflow: visible;
                   }
                   .rbc-row {
-                    overflow: visible !important;
                     display: flex;
                     flex: 1;
+                    position: relative;
+                    overflow: visible;
                   }
                   .rbc-date-cell {
                     text-align: center;
@@ -304,6 +310,8 @@ const Calendar = () => {
                     font-weight: bold;
                     cursor: pointer;
                     padding: 0 2px;
+                    z-index: 10;
+                    position: relative;
                   }
                   .rbc-day-slot .rbc-events-container {
                     min-height: 100%;
@@ -322,6 +330,36 @@ const Calendar = () => {
                     border-radius: 4px;
                     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
                     padding: 10px;
+                  }
+                  /* Fixed height for month rows to ensure all days are visible */
+                  .rbc-month-row {
+                    min-height: 110px;
+                    max-height: 110px;
+                  }
+                  /* Ensure row content scrolls properly */
+                  .rbc-row-content {
+                    overflow: visible !important;
+                    max-height: none !important;
+                  }
+                  /* Ensure events are visible within cells */
+                  .rbc-event-content {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                  }
+                  /* Make the "show more" button more visible */
+                  .rbc-row-segment {
+                    padding: 0 1px;
+                  }
+                  /* Fix for weeks in month view */
+                  .rbc-month-view .rbc-month-row {
+                    overflow: visible !important;
+                    display: flex;
+                    flex: 1;
+                  }
+                  /* Ensure the entire calendar is scrollable */
+                  .calendar-container {
+                    height: 100%;
+                    overflow: auto;
                   }
                   @media (max-width: 640px) {
                     .rbc-toolbar {
