@@ -246,7 +246,7 @@ const Calendar = () => {
             </div>
             
             <div className="calendar-container h-full pb-4 px-2 sm:px-4">
-              <style jsx global>{`
+              <style dangerouslySetInnerHTML={{ __html: `
                 .rbc-calendar {
                   width: 100%;
                   height: 100%;
@@ -283,7 +283,7 @@ const Calendar = () => {
                     margin-right: 0;
                   }
                 }
-              `}</style>
+              `}} />
               <BigCalendar
                 localizer={localizer}
                 events={calendarEvents}
