@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
@@ -265,19 +264,36 @@ const Calendar = () => {
                   border: none;
                 }
                 .rbc-month-view {
-                  overflow: auto;
+                  overflow: visible !important;
+                  height: auto !important;
                 }
                 .rbc-month-row {
-                  overflow: visible;
+                  overflow: visible !important;
+                  height: auto !important;
+                  min-height: 100px;
+                }
+                .rbc-row-bg {
+                  overflow: visible !important;
                 }
                 .rbc-row-content {
-                  overflow: visible;
+                  overflow: visible !important;
+                  height: auto !important;
                 }
-                .rbc-row-content-scrollable {
-                  overflow-y: auto;
+                .rbc-row {
+                  overflow: visible !important;
                 }
                 .rbc-row-segment {
-                  overflow: hidden;
+                  overflow: visible !important;
+                }
+                .rbc-date-cell {
+                  text-align: center;
+                }
+                .rbc-month-view .rbc-month-row {
+                  position: relative;
+                }
+                .rbc-month-view .rbc-row-content-scrollable {
+                  position: relative;
+                  height: auto !important;
                 }
                 .rbc-month-view .rbc-row-content-scrollable .rbc-row-segment {
                   padding-right: 0;
