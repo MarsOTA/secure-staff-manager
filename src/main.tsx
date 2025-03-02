@@ -5,11 +5,14 @@ import App from './App.tsx';
 import './index.css';
 import { Toaster } from './components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
+import { AuthProvider } from './contexts/AuthContext';
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
-    <App />
-    <Toaster />
-    <SonnerToaster position="top-right" closeButton richColors />
+    <AuthProvider>
+      <App />
+      <Toaster />
+      <SonnerToaster position="top-right" closeButton richColors />
+    </AuthProvider>
   </BrowserRouter>
 );
