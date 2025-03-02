@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   Card,
@@ -37,6 +36,7 @@ import {
 import { Event } from "./Events";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useNavigate } from "react-router-dom";
 
 interface Operator {
   id: number;
@@ -47,7 +47,6 @@ interface Operator {
   assignedEvents?: number[]; // IDs degli eventi assegnati
 }
 
-// Chiave per il localStorage
 const EVENTS_STORAGE_KEY = "app_events_data";
 const OPERATORS_STORAGE_KEY = "app_operators_data";
 
@@ -86,9 +85,9 @@ const Operators = () => {
     status: "active" as "active" | "inactive",
   });
 
-  // Carica gli operatori e gli eventi all'avvio
+  const navigate = useNavigate();
+
   useEffect(() => {
-    // Carica operatori dal localStorage se esistono
     const storedOperators = localStorage.getItem(OPERATORS_STORAGE_KEY);
     if (storedOperators) {
       try {
@@ -97,11 +96,9 @@ const Operators = () => {
         console.error("Errore nel caricamento degli operatori:", error);
       }
     } else {
-      // Salva gli operatori predefiniti nel localStorage
       localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
     }
     
-    // Carica eventi
     const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
     if (storedEvents) {
       try {
@@ -121,7 +118,6 @@ const Operators = () => {
     }
   }, []);
   
-  // Salva gli operatori nel localStorage quando cambiano
   useEffect(() => {
     localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
   }, [operators]);
@@ -168,7 +164,6 @@ const Operators = () => {
     e.preventDefault();
     
     if (editingOperator) {
-      // Editing existing operator
       setOperators((prev) =>
         prev.map((op) =>
           op.id === editingOperator.id
@@ -178,7 +173,6 @@ const Operators = () => {
       );
       toast.success("Operatore aggiornato con successo");
     } else {
-      // Adding new operator
       const newId = Math.max(0, ...operators.map((op) => op.id)) + 1;
       setOperators((prev) => [
         ...prev,
@@ -189,14 +183,13 @@ const Operators = () => {
     
     setIsDialogOpen(false);
   };
-  
-  // Gestione assegnazione operatore a evento
+
   const openAssignDialog = (operator: Operator) => {
     setAssigningOperator(operator);
     setSelectedEventId("");
     setIsAssignDialogOpen(true);
   };
-  
+
   const handleAssignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -207,12 +200,10 @@ const Operators = () => {
     
     const eventId = parseInt(selectedEventId);
     
-    // Aggiorna l'operatore con l'evento assegnato
     setOperators((prev) =>
       prev.map((op) => {
         if (op.id === assigningOperator.id) {
           const currentAssignedEvents = op.assignedEvents || [];
-          // Verifica se l'evento è già assegnato
           if (currentAssignedEvents.includes(eventId)) {
             toast.info("Operatore già assegnato a questo evento");
             return op;
@@ -227,14 +218,12 @@ const Operators = () => {
       })
     );
     
-    // Trova il nome dell'evento per il messaggio di toast
     const eventName = events.find(e => e.id === eventId)?.title || "Evento selezionato";
     
     toast.success(`${assigningOperator.name} assegnato a "${eventName}"`);
     setIsAssignDialogOpen(false);
   };
-  
-  // Formatta data e ora per visualizzazione
+
   const formatDateRange = (start: Date, end: Date) => {
     const sameDay = start.getDate() === end.getDate() && 
                     start.getMonth() === end.getMonth() && 
@@ -251,8 +240,7 @@ const Operators = () => {
       return `Dal ${startDateStr}, ${startTimeStr} al ${endDateStr}, ${endTimeStr}`;
     }
   };
-  
-  // Ottiene gli eventi assegnati a un operatore
+
   const getAssignedEvents = (operatorId: number) => {
     const operator = operators.find(op => op.id === operatorId);
     if (!operator || !operator.assignedEvents || operator.assignedEvents.length === 0) {
@@ -260,6 +248,10 @@ const Operators = () => {
     }
     
     return events.filter(event => operator.assignedEvents?.includes(event.id));
+  };
+
+  const handleEdit = (operator: Operator) => {
+    navigate(`/operator-profile/${operator.id}`);
   };
 
   return (
@@ -335,7 +327,7 @@ const Operators = () => {
                       <Button 
                         variant="outline" 
                         size="icon"
-                        onClick={() => openEditDialog(operator)}
+                        onClick={() => handleEdit(operator)}
                         title="Modifica operatore"
                       >
                         <Pencil className="h-4 w-4" />
@@ -365,7 +357,6 @@ const Operators = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog per aggiungere/modificare operatore */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -440,8 +431,7 @@ const Operators = () => {
           </form>
         </DialogContent>
       </Dialog>
-      
-      {/* Dialog per assegnare operatore a evento */}
+
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
