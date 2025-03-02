@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -885,3 +886,615 @@ ___________________                                   ___________________
                         <Checkbox 
                           id={`fluent-${language}`} 
                           checked={operator.fluentLanguages?.includes(language)}
+                          onCheckedChange={() => handleLanguageToggle(language, 'fluent')}
+                        />
+                        <Label 
+                          htmlFor={`fluent-${language}`}
+                          className="text-sm font-normal"
+                        >
+                          {language}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <Label>Lingue parlate a livello base</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {LANGUAGES.map((language) => (
+                      <div key={`basic-${language}`} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`basic-${language}`} 
+                          checked={operator.basicLanguages?.includes(language)}
+                          onCheckedChange={() => handleLanguageToggle(language, 'basic')}
+                        />
+                        <Label 
+                          htmlFor={`basic-${language}`}
+                          className="text-sm font-normal"
+                        >
+                          {language}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* CARATTERISTICHE FISICHE */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Caratteristiche Fisiche</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="height">Altezza (cm)</Label>
+                    <Input
+                      id="height"
+                      type="number"
+                      min={140}
+                      max={220}
+                      value={operator.height}
+                      onChange={(e) => handleChange("height", Number(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="weight">Peso (kg)</Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      min={40}
+                      max={150}
+                      value={operator.weight}
+                      onChange={(e) => handleChange("weight", Number(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bodyType">Corporatura</Label>
+                    <Select
+                      value={operator.bodyType}
+                      onValueChange={(value) => handleChange("bodyType", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona corporatura" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BODY_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="eyeColor">Colore occhi</Label>
+                    <Input
+                      id="eyeColor"
+                      value={operator.eyeColor}
+                      onChange={(e) => handleChange("eyeColor", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="hairColor">Colore capelli</Label>
+                    <Select
+                      value={operator.hairColor}
+                      onValueChange={(value) => handleChange("hairColor", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona colore capelli" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HAIR_COLORS.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            {color.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="hairLength">Lunghezza capelli</Label>
+                    <Input
+                      id="hairLength"
+                      value={operator.hairLength}
+                      onChange={(e) => handleChange("hairLength", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 pt-8">
+                    <Checkbox 
+                      id="visibleTattoos"
+                      checked={operator.visibleTattoos}
+                      onCheckedChange={(checked) => 
+                        handleChange("visibleTattoos", checked === true)
+                      }
+                    />
+                    <Label htmlFor="visibleTattoos">Tatuaggi visibili?</Label>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <Label>Taglie di vestiti</Label>
+                  <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-9 gap-2">
+                    {SIZES.map((size) => (
+                      <div key={size} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`size-${size}`} 
+                          checked={operator.sizes?.includes(size)}
+                          onCheckedChange={() => handleSizeToggle(size)}
+                        />
+                        <Label 
+                          htmlFor={`size-${size}`}
+                          className="text-sm font-normal"
+                        >
+                          {size}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="shoeSize">Numero di scarpe</Label>
+                    <Input
+                      id="shoeSize"
+                      type="number"
+                      min={34}
+                      max={50}
+                      value={operator.shoeSize}
+                      onChange={(e) => handleChange("shoeSize", Number(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="chestSize">Misura petto/seno (cm)</Label>
+                    <Input
+                      id="chestSize"
+                      type="number"
+                      min={70}
+                      max={140}
+                      value={operator.chestSize}
+                      onChange={(e) => handleChange("chestSize", Number(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="waistSize">Misura vita (cm)</Label>
+                    <Input
+                      id="waistSize"
+                      type="number"
+                      min={60}
+                      max={140}
+                      value={operator.waistSize}
+                      onChange={(e) => handleChange("waistSize", Number(e.target.value))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="hipsSize">Misura fianchi (cm)</Label>
+                    <Input
+                      id="hipsSize"
+                      type="number"
+                      min={80}
+                      max={150}
+                      value={operator.hipsSize}
+                      onChange={(e) => handleChange("hipsSize", Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* DOCUMENTI */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Documenti</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="idCardNumber">Numero carta d'identità</Label>
+                    <Input
+                      id="idCardNumber"
+                      value={operator.idCardNumber}
+                      onChange={(e) => handleChange("idCardNumber", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="residencePermitNumber">Numero permesso di soggiorno (se straniero)</Label>
+                    <Input
+                      id="residencePermitNumber"
+                      value={operator.residencePermitNumber}
+                      onChange={(e) => handleChange("residencePermitNumber", e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="idCardFrontImage">Carta d'identità (fronte)</Label>
+                    <Input
+                      id="idCardFrontImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("idCardFrontImage", "idCardFrontFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.idCardFrontFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.idCardFrontFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.idCardFrontImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.idCardFrontImage} 
+                          alt="Anteprima carta d'identità fronte" 
+                          className="max-h-40 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="idCardBackImage">Carta d'identità (retro)</Label>
+                    <Input
+                      id="idCardBackImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("idCardBackImage", "idCardBackFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.idCardBackFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.idCardBackFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.idCardBackImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.idCardBackImage} 
+                          alt="Anteprima carta d'identità retro" 
+                          className="max-h-40 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="healthCardFrontImage">Tessera sanitaria (fronte)</Label>
+                    <Input
+                      id="healthCardFrontImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("healthCardFrontImage", "healthCardFrontFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.healthCardFrontFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.healthCardFrontFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.healthCardFrontImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.healthCardFrontImage} 
+                          alt="Anteprima tessera sanitaria fronte" 
+                          className="max-h-40 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="healthCardBackImage">Tessera sanitaria (retro)</Label>
+                    <Input
+                      id="healthCardBackImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("healthCardBackImage", "healthCardBackFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.healthCardBackFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.healthCardBackFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.healthCardBackImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.healthCardBackImage} 
+                          alt="Anteprima tessera sanitaria retro" 
+                          className="max-h-40 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* FOTO PROFILO */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Foto profilo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="facePhotoFile">Foto viso</Label>
+                    <Input
+                      id="facePhotoFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("facePhotoFile", "facePhotoFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.facePhotoFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.facePhotoFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.facePhotoFile && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.facePhotoFile} 
+                          alt="Anteprima foto viso" 
+                          className="max-h-60 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bustPhotoFile">Foto busto</Label>
+                    <Input
+                      id="bustPhotoFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("bustPhotoFile", "bustPhotoFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.bustPhotoFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.bustPhotoFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.bustPhotoFile && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.bustPhotoFile} 
+                          alt="Anteprima foto busto" 
+                          className="max-h-60 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="fullBodyPhotoFile">Foto figura intera</Label>
+                    <Input
+                      id="fullBodyPhotoFile"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          handleFileUpload("fullBodyPhotoFile", "fullBodyPhotoFileName", file);
+                        }
+                      }}
+                    />
+                    {operator.fullBodyPhotoFileName && (
+                      <div className="text-sm text-muted-foreground mt-1">
+                        File selezionato: {operator.fullBodyPhotoFileName}
+                      </div>
+                    )}
+                    {imagePreviewUrls.fullBodyPhotoFile && (
+                      <div className="mt-2">
+                        <img 
+                          src={imagePreviewUrls.fullBodyPhotoFile} 
+                          alt="Anteprima foto figura intera" 
+                          className="max-h-60 border rounded"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* DATI BANCARI */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dati bancari</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="accountHolder">Intestatario conto</Label>
+                    <Input
+                      id="accountHolder"
+                      value={operator.accountHolder}
+                      onChange={(e) => handleChange("accountHolder", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bankName">Nome banca</Label>
+                    <Input
+                      id="bankName"
+                      value={operator.bankName}
+                      onChange={(e) => handleChange("bankName", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="iban">IBAN</Label>
+                    <Input
+                      id="iban"
+                      value={operator.iban}
+                      onChange={(e) => handleChange("iban", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bic">BIC/SWIFT</Label>
+                    <Input
+                      id="bic"
+                      value={operator.bic}
+                      onChange={(e) => handleChange("bic", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="accountNumber">Numero conto</Label>
+                    <Input
+                      id="accountNumber"
+                      value={operator.accountNumber}
+                      onChange={(e) => handleChange("accountNumber", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* SOCIAL */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Social</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram" className="flex items-center">
+                      <Instagram className="mr-2 h-4 w-4" />
+                      Instagram
+                    </Label>
+                    <Input
+                      id="instagram"
+                      value={operator.instagram}
+                      onChange={(e) => handleChange("instagram", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="facebook" className="flex items-center">
+                      <Facebook className="mr-2 h-4 w-4" />
+                      Facebook
+                    </Label>
+                    <Input
+                      id="facebook"
+                      value={operator.facebook}
+                      onChange={(e) => handleChange("facebook", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="tiktok" className="flex items-center">
+                      <span className="mr-2">TikTok</span>
+                    </Label>
+                    <Input
+                      id="tiktok"
+                      value={operator.tiktok}
+                      onChange={(e) => handleChange("tiktok", e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedin" className="flex items-center">
+                      <Linkedin className="mr-2 h-4 w-4" />
+                      LinkedIn
+                    </Label>
+                    <Input
+                      id="linkedin"
+                      value={operator.linkedin}
+                      onChange={(e) => handleChange("linkedin", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="contract" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestione Contratto</CardTitle>
+                <CardDescription>
+                  Seleziona il tipo di contratto e genera il documento
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <Label htmlFor="contractType">Tipo di contratto</Label>
+                  <Select
+                    value={contractType}
+                    onValueChange={setContractType}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona tipo di contratto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CONTRACT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="pt-4">
+                    <Button onClick={generateContract} className="w-full">
+                      <Download className="mr-2 h-4 w-4" />
+                      Genera Contratto
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
+  );
+};
+
+export default OperatorProfile;
