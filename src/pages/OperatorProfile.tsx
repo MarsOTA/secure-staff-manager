@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -38,7 +37,7 @@ import {
   Euro 
 } from "lucide-react";
 
-// Extend the Operator interface with all the new fields
+// Modifichiamo l'interfaccia per usare stringhe per le immagini invece di File
 interface ExtendedOperator {
   id: number;
   name: string;
@@ -69,7 +68,8 @@ interface ExtendedOperator {
   availability: ("tutto-il-giorno" | "su-chiamata" | "mattina" | "pomeriggio" | "sera" | "notte")[];
   drivingLicense: boolean;
   hasVehicle: boolean;
-  resumeFile?: File | null;
+  resumeFile?: string | null;
+  resumeFileName?: string;
   
   // Languages
   fluentLanguages: string[];
@@ -92,15 +92,22 @@ interface ExtendedOperator {
   // ID documents
   idCardNumber: string;
   residencePermitNumber?: string;
-  idCardFrontImage?: File | null;
-  idCardBackImage?: File | null;
-  healthCardFrontImage?: File | null;
-  healthCardBackImage?: File | null;
+  idCardFrontImage?: string | null;
+  idCardFrontFileName?: string;
+  idCardBackImage?: string | null;
+  idCardBackFileName?: string;
+  healthCardFrontImage?: string | null;
+  healthCardFrontFileName?: string;
+  healthCardBackImage?: string | null;
+  healthCardBackFileName?: string;
   
   // Profile photos
-  bustPhotoFile?: File | null;
-  facePhotoFile?: File | null;
-  fullBodyPhotoFile?: File | null;
+  bustPhotoFile?: string | null;
+  bustPhotoFileName?: string;
+  facePhotoFile?: string | null;
+  facePhotoFileName?: string;
+  fullBodyPhotoFile?: string | null;
+  fullBodyPhotoFileName?: string;
   
   // Banking info
   iban: string;
@@ -170,6 +177,7 @@ const OperatorProfile = () => {
   
   const [operator, setOperator] = useState<ExtendedOperator | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
   
   // Load operator data
   useEffect(() => {
@@ -237,9 +245,38 @@ const OperatorProfile = () => {
           facebook: foundOperator.facebook || "",
           tiktok: foundOperator.tiktok || "",
           linkedin: foundOperator.linkedin || "",
+          resumeFile: foundOperator.resumeFile || null,
+          resumeFileName: foundOperator.resumeFileName || "",
+          idCardFrontImage: foundOperator.idCardFrontImage || null,
+          idCardFrontFileName: foundOperator.idCardFrontFileName || "",
+          idCardBackImage: foundOperator.idCardBackImage || null,
+          idCardBackFileName: foundOperator.idCardBackFileName || "",
+          healthCardFrontImage: foundOperator.healthCardFrontImage || null,
+          healthCardFrontFileName: foundOperator.healthCardFrontFileName || "",
+          healthCardBackImage: foundOperator.healthCardBackImage || null,
+          healthCardBackFileName: foundOperator.healthCardBackFileName || "",
+          bustPhotoFile: foundOperator.bustPhotoFile || null,
+          bustPhotoFileName: foundOperator.bustPhotoFileName || "",
+          facePhotoFile: foundOperator.facePhotoFile || null,
+          facePhotoFileName: foundOperator.facePhotoFileName || "",
+          fullBodyPhotoFile: foundOperator.fullBodyPhotoFile || null,
+          fullBodyPhotoFileName: foundOperator.fullBodyPhotoFileName || "",
         };
         
         setOperator(extendedOperator);
+        
+        // Populate preview URLs from stored base64 data
+        const previews: Record<string, string> = {};
+        if (extendedOperator.resumeFile) previews.resumeFile = extendedOperator.resumeFile;
+        if (extendedOperator.idCardFrontImage) previews.idCardFrontImage = extendedOperator.idCardFrontImage;
+        if (extendedOperator.idCardBackImage) previews.idCardBackImage = extendedOperator.idCardBackImage;
+        if (extendedOperator.healthCardFrontImage) previews.healthCardFrontImage = extendedOperator.healthCardFrontImage;
+        if (extendedOperator.healthCardBackImage) previews.healthCardBackImage = extendedOperator.healthCardBackImage;
+        if (extendedOperator.bustPhotoFile) previews.bustPhotoFile = extendedOperator.bustPhotoFile;
+        if (extendedOperator.facePhotoFile) previews.facePhotoFile = extendedOperator.facePhotoFile;
+        if (extendedOperator.fullBodyPhotoFile) previews.fullBodyPhotoFile = extendedOperator.fullBodyPhotoFile;
+        
+        setImagePreviewUrls(previews);
       } catch (error) {
         console.error("Errore nel caricamento dell'operatore:", error);
         toast.error("Errore nel caricamento dell'operatore");
@@ -321,13 +358,57 @@ const OperatorProfile = () => {
     handleChange("sizes", updatedSizes);
   };
   
-  const handleFileUpload = (field: keyof ExtendedOperator, file: File | null) => {
+  // Funzione per convertire un file in base64 URL
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+  
+  const handleFileUpload = async (field: keyof ExtendedOperator, fileNameField: keyof ExtendedOperator, file: File | null) => {
     if (!operator) return;
     
-    setOperator({
-      ...operator,
-      [field]: file,
-    });
+    if (file) {
+      try {
+        // Convertire il file in base64
+        const base64 = await fileToBase64(file);
+        
+        // Aggiornare lo stato con il base64 e il nome del file
+        setOperator({
+          ...operator,
+          [field]: base64,
+          [fileNameField]: file.name,
+        });
+        
+        // Aggiornare anche il preview
+        setImagePreviewUrls(prev => ({
+          ...prev,
+          [field]: base64
+        }));
+        
+        console.log(`File ${file.name} convertito in base64 e memorizzato`);
+      } catch (error) {
+        console.error(`Errore nella conversione del file ${file.name}:`, error);
+        toast.error(`Errore nel caricamento del file ${file.name}`);
+      }
+    } else {
+      // Se file è null, rimuovere l'immagine
+      setOperator({
+        ...operator,
+        [field]: null,
+        [fileNameField]: "",
+      });
+      
+      // Rimuovere anche il preview
+      setImagePreviewUrls(prev => {
+        const newPreviews = { ...prev };
+        delete newPreviews[field as string];
+        return newPreviews;
+      });
+    }
   };
   
   const handleSave = () => {
@@ -637,13 +718,27 @@ const OperatorProfile = () => {
                 accept=".pdf,.doc,.docx"
                 onChange={(e) => {
                   const file = e.target.files?.[0] || null;
-                  handleFileUpload("resumeFile", file);
+                  if (file) {
+                    handleFileUpload("resumeFile", "resumeFileName", file);
+                  }
                 }}
               />
-              {operator.resumeFile && (
-                <p className="text-sm text-muted-foreground">
-                  File selezionato: {operator.resumeFile.name}
-                </p>
+              {operator.resumeFileName && (
+                <div className="text-sm text-muted-foreground mt-1">
+                  File selezionato: {operator.resumeFileName}
+                </div>
+              )}
+              {imagePreviewUrls.resumeFile && operator.resumeFile?.startsWith('data:application/pdf') && (
+                <div className="mt-2">
+                  <a 
+                    href={imagePreviewUrls.resumeFile} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Visualizza PDF
+                  </a>
+                </div>
               )}
             </div>
           </CardContent>
@@ -896,13 +991,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("idCardFrontImage", file);
+                    if (file) {
+                      handleFileUpload("idCardFrontImage", "idCardFrontFileName", file);
+                    }
                   }}
                 />
-                {operator.idCardFrontImage && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.idCardFrontImage.name}
-                  </p>
+                {operator.idCardFrontFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.idCardFrontFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.idCardFrontImage && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.idCardFrontImage} 
+                      alt="Anteprima carta d'identità fronte" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
               
@@ -914,13 +1020,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("idCardBackImage", file);
+                    if (file) {
+                      handleFileUpload("idCardBackImage", "idCardBackFileName", file);
+                    }
                   }}
                 />
-                {operator.idCardBackImage && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.idCardBackImage.name}
-                  </p>
+                {operator.idCardBackFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.idCardBackFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.idCardBackImage && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.idCardBackImage} 
+                      alt="Anteprima carta d'identità retro" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
               
@@ -932,13 +1049,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("healthCardFrontImage", file);
+                    if (file) {
+                      handleFileUpload("healthCardFrontImage", "healthCardFrontFileName", file);
+                    }
                   }}
                 />
-                {operator.healthCardFrontImage && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.healthCardFrontImage.name}
-                  </p>
+                {operator.healthCardFrontFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.healthCardFrontFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.healthCardFrontImage && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.healthCardFrontImage} 
+                      alt="Anteprima tessera sanitaria fronte" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
               
@@ -950,13 +1078,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("healthCardBackImage", file);
+                    if (file) {
+                      handleFileUpload("healthCardBackImage", "healthCardBackFileName", file);
+                    }
                   }}
                 />
-                {operator.healthCardBackImage && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.healthCardBackImage.name}
-                  </p>
+                {operator.healthCardBackFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.healthCardBackFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.healthCardBackImage && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.healthCardBackImage} 
+                      alt="Anteprima tessera sanitaria retro" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -978,13 +1117,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("bustPhotoFile", file);
+                    if (file) {
+                      handleFileUpload("bustPhotoFile", "bustPhotoFileName", file);
+                    }
                   }}
                 />
-                {operator.bustPhotoFile && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.bustPhotoFile.name}
-                  </p>
+                {operator.bustPhotoFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.bustPhotoFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.bustPhotoFile && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.bustPhotoFile} 
+                      alt="Anteprima foto mezzo busto" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
               
@@ -996,13 +1146,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("facePhotoFile", file);
+                    if (file) {
+                      handleFileUpload("facePhotoFile", "facePhotoFileName", file);
+                    }
                   }}
                 />
-                {operator.facePhotoFile && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.facePhotoFile.name}
-                  </p>
+                {operator.facePhotoFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.facePhotoFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.facePhotoFile && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.facePhotoFile} 
+                      alt="Anteprima foto primo piano" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
               
@@ -1014,13 +1175,24 @@ const OperatorProfile = () => {
                   accept="image/*"
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
-                    handleFileUpload("fullBodyPhotoFile", file);
+                    if (file) {
+                      handleFileUpload("fullBodyPhotoFile", "fullBodyPhotoFileName", file);
+                    }
                   }}
                 />
-                {operator.fullBodyPhotoFile && (
-                  <p className="text-sm text-muted-foreground">
-                    File selezionato: {operator.fullBodyPhotoFile.name}
-                  </p>
+                {operator.fullBodyPhotoFileName && (
+                  <div className="text-sm text-muted-foreground mt-1">
+                    File selezionato: {operator.fullBodyPhotoFileName}
+                  </div>
+                )}
+                {imagePreviewUrls.fullBodyPhotoFile && (
+                  <div className="mt-2">
+                    <img 
+                      src={imagePreviewUrls.fullBodyPhotoFile} 
+                      alt="Anteprima foto figura intera" 
+                      className="max-h-40 border rounded"
+                    />
+                  </div>
                 )}
               </div>
             </div>
