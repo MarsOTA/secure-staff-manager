@@ -1,14 +1,16 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, FileText } from "lucide-react";
+import { User, FileText, DollarSign } from "lucide-react";
 import { ExtendedOperator, OPERATORS_STORAGE_KEY } from "@/types/operator";
 import { fileToBase64 } from "@/utils/fileUtils";
 import OperatorHeader from "@/components/operator/OperatorHeader";
 import PersonalInfoTab from "@/components/operator/PersonalInfoTab";
 import ContractTab from "@/components/operator/ContractTab";
+import PayrollTab from "@/components/operator/PayrollTab";
 
 const OperatorProfile = () => {
   const { id } = useParams();
@@ -386,7 +388,7 @@ ___________________                                   ___________________
         />
         
         <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-2">
+          <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="info" className="text-base py-3">
               <User className="mr-2 h-4 w-4" />
               Info Operatore
@@ -394,6 +396,10 @@ ___________________                                   ___________________
             <TabsTrigger value="contract" className="text-base py-3">
               <FileText className="mr-2 h-4 w-4" />
               Contrattualistica
+            </TabsTrigger>
+            <TabsTrigger value="payroll" className="text-base py-3">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Payroll
             </TabsTrigger>
           </TabsList>
           
@@ -417,6 +423,10 @@ ___________________                                   ___________________
               onContractTypeChange={setContractType}
               onGenerateContract={generateContract}
             />
+          </TabsContent>
+
+          <TabsContent value="payroll" className="space-y-6 mt-6">
+            <PayrollTab operator={operator} />
           </TabsContent>
         </Tabs>
       </div>
