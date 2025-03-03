@@ -19,6 +19,7 @@ import { it } from "date-fns/locale";
 import { Calendar as CalendarIcon, ArrowLeft, MapPin, Building, Clock, Euro } from "lucide-react";
 import { toast } from "sonner";
 import { Event } from "./Events";
+import { Client } from "./Clients";
 
 const personnelTypes = [
   { id: "security", label: "Security" },
@@ -26,14 +27,8 @@ const personnelTypes = [
   { id: "hostess", label: "Hostess/Steward" },
 ];
 
-const clients = [
-  { id: 1, name: "Rock Productions" },
-  { id: 2, name: "MediaGroup" },
-  { id: 3, name: "Festival Italiano" },
-  { id: 4, name: "Sport Events" },
-];
-
 const EVENTS_STORAGE_KEY = "app_events_data";
+const CLIENTS_STORAGE_KEY = "app_clients_data";
 
 interface PlacePrediction {
   description: string;
@@ -97,8 +92,25 @@ const EventCreate = () => {
   const [hourlyRateCost, setHourlyRateCost] = useState("");
   const [hourlyRateSell, setHourlyRateSell] = useState("");
   
+  const [clients, setClients] = useState<Client[]>([]);
+  
   const googleScriptLoaded = useRef(false);
   const autocompleteService = useRef<any>(null);
+  
+  useEffect(() => {
+    const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
+    if (storedClients) {
+      try {
+        const parsedClients = JSON.parse(storedClients);
+        setClients(parsedClients);
+      } catch (error) {
+        console.error("Errore nel caricamento dei clienti:", error);
+        setClients([]);
+      }
+    } else {
+      setClients([]);
+    }
+  }, []);
   
   useEffect(() => {
     if (!googleScriptLoaded.current) {
@@ -142,7 +154,7 @@ const EventCreate = () => {
           if (eventToEdit) {
             setTitle(eventToEdit.title);
             
-            const clientObject = clients.find(c => c.name === eventToEdit.client);
+            const clientObject = clients.find(c => c.companyName === eventToEdit.client);
             if (clientObject) {
               setClient(clientObject.id.toString());
             }
@@ -191,7 +203,7 @@ const EventCreate = () => {
         toast.error("Impossibile caricare i dati dell'evento");
       }
     }
-  }, [eventId, isEditMode]);
+  }, [eventId, isEditMode, clients]);
   
   const handlePersonnelChange = (personnelId: string) => {
     setSelectedPersonnel((current) => {
@@ -320,7 +332,7 @@ const EventCreate = () => {
             return {
               ...event,
               title,
-              client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
+              client: selectedClient ? selectedClient.companyName : 'Cliente sconosciuto',
               startDate: fullStartDate,
               endDate: fullEndDate,
               personnelTypes: selectedPersonnel,
@@ -340,7 +352,7 @@ const EventCreate = () => {
         const newEvent: Event = {
           id: maxId + 1,
           title,
-          client: selectedClient ? selectedClient.name : 'Cliente sconosciuto',
+          client: selectedClient ? selectedClient.companyName : 'Cliente sconosciuto',
           startDate: fullStartDate,
           endDate: fullEndDate,
           personnelTypes: selectedPersonnel,
@@ -416,13 +428,31 @@ const EventCreate = () => {
                   <SelectValue placeholder="Seleziona cliente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
-                      {client.name}
+                  {clients.length > 0 ? (
+                    clients.map((clientItem) => (
+                      <SelectItem key={clientItem.id} value={clientItem.id.toString()}>
+                        {clientItem.companyName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-clients" disabled>
+                      Nessun cliente disponibile
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
+              {clients.length === 0 && (
+                <p className="text-sm text-amber-500 mt-1">
+                  Non ci sono clienti disponibili. 
+                  <Button 
+                    variant="link" 
+                    className="px-1 py-0 h-auto text-sm" 
+                    onClick={() => navigate('/client-create')}
+                  >
+                    Crea un cliente
+                  </Button>
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
