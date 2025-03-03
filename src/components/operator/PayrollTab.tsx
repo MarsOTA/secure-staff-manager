@@ -32,21 +32,21 @@ import {
 } from "recharts";
 import { FileDown, Clock, Euro, Car, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define the event type
 interface Event {
   id: number;
   title: string;
   client: string;
-  startDate: string;
-  endDate: string;
+  start_date: string;
+  end_date: string;
   location: string;
-  personnelTypes: string[];
-  personnelCount: number;
-  hourlyRateCost: string;
-  hourlyRateSell: string;
-  operatorIds?: number[];
-  status?: "upcoming" | "in-progress" | "completed";
+  personnel_types?: string[];
+  personnel_count?: number;
+  hourly_rate?: number;
+  hourly_rate_sell?: number;
+  status?: "upcoming" | "in-progress" | "completed" | "cancelled";
 }
 
 // Define the payroll calculation type
@@ -63,7 +63,6 @@ interface PayrollCalculation {
   totalRevenue: number;
 }
 
-const EVENTS_STORAGE_KEY = "app_events_data";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
@@ -76,52 +75,94 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     totalAllowances: 0,
     totalRevenue: 0
   });
+  const [loading, setLoading] = useState(true);
 
-  // Load events and calculate payroll
+  // Load events and calculate payroll from Supabase
   useEffect(() => {
-    const loadEvents = () => {
+    const loadEvents = async () => {
       try {
-        const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
-        if (!storedEvents) return;
-
-        const allEvents: Event[] = JSON.parse(storedEvents);
+        setLoading(true);
         
-        // Filter events for this operator
-        const operatorEvents = allEvents.filter(event => 
-          event.operatorIds?.includes(operator.id)
-        );
+        // Fetch events and event_operators data for this operator
+        const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
+          .from('event_operators')
+          .select(`
+            id,
+            event_id,
+            hourly_rate,
+            total_hours,
+            net_hours,
+            meal_allowance,
+            travel_allowance,
+            total_compensation,
+            revenue_generated,
+            events(
+              id,
+              title,
+              start_date,
+              end_date,
+              location,
+              status,
+              clients(name)
+            )
+          `)
+          .eq('operator_id', operator.id);
         
-        setEvents(operatorEvents);
+        if (eventOperatorsError) {
+          console.error("Errore nel caricamento degli eventi:", eventOperatorsError);
+          toast.error("Errore nel caricamento degli eventi");
+          return;
+        }
         
-        // Calculate payroll data
-        const payrollData = operatorEvents.map(event => {
-          const startDate = new Date(event.startDate);
-          const endDate = new Date(event.endDate);
+        if (!eventOperatorsData || eventOperatorsData.length === 0) {
+          setEvents([]);
+          setCalculations([]);
+          setSummaryData({
+            totalGrossHours: 0,
+            totalNetHours: 0,
+            totalCompensation: 0,
+            totalAllowances: 0,
+            totalRevenue: 0
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Process events data
+        const eventsData = eventOperatorsData.map(item => ({
+          id: item.events.id,
+          title: item.events.title,
+          client: item.events.clients?.name || 'Cliente sconosciuto',
+          start_date: item.events.start_date,
+          end_date: item.events.end_date,
+          location: item.events.location || '',
+          status: item.events.status,
+          hourly_rate: item.hourly_rate || 15,
+          hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25
+        }));
+        
+        setEvents(eventsData);
+        
+        // Generate payroll calculations
+        const payrollData = eventOperatorsData.map(item => {
+          const event = item.events;
           
-          // Calculate hours
-          const totalHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-          
-          // Assume 1 hour lunch break for events longer than 5 hours
-          const lunchBreakHours = totalHours > 5 ? 1 : 0;
-          const netHours = totalHours - lunchBreakHours;
-          
-          // Calculate compensation (hourly rate * net hours)
-          const hourlyRate = parseFloat(event.hourlyRateCost) || 15; // Default to 15 if not specified
-          const compensation = netHours * hourlyRate;
-          
-          // Allowances (simplified calculation)
-          const mealAllowance = totalHours > 5 ? 10 : 0; // €10 meal allowance for shifts > 5 hours
-          const travelAllowance = 15; // Fixed €15 travel allowance per event
-          
-          // Revenue (what client is charged)
-          const hourlyRateSell = parseFloat(event.hourlyRateSell) || 25; // Default to 25 if not specified
-          const totalRevenue = netHours * hourlyRateSell;
+          // In case we need to calculate on our own (fallback)
+          const startDate = new Date(event.start_date);
+          const endDate = new Date(event.end_date);
+          const totalHours = item.total_hours || (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+          const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
+          const hourlyRate = item.hourly_rate || 15;
+          const compensation = item.total_compensation || (netHours * hourlyRate);
+          const mealAllowance = item.meal_allowance || (totalHours > 5 ? 10 : 0);
+          const travelAllowance = item.travel_allowance || 15;
+          const totalRevenue = item.revenue_generated || (netHours * (item.hourly_rate * 1.667)); // Default margin
           
           return {
             eventId: event.id,
             eventTitle: event.title,
-            client: event.client,
-            date: new Date(event.startDate).toLocaleDateString('it-IT'),
+            client: event.clients?.name || 'Cliente sconosciuto',
+            date: new Date(event.start_date).toLocaleDateString('it-IT'),
             grossHours: totalHours,
             netHours,
             compensation,
@@ -154,6 +195,9 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         
       } catch (error) {
         console.error("Errore nel caricamento degli eventi:", error);
+        toast.error("Errore nel caricamento degli eventi");
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -297,22 +341,28 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             <CardDescription>Ore e compensi per evento</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={generateBarChartData()}
-                margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Ore Lorde" fill="#8884d8" />
-                <Bar dataKey="Ore Nette" fill="#82ca9d" />
-                <Bar dataKey="Compenso (€)" fill="#ffc658" />
-                <Bar dataKey="Fatturato (€)" fill="#ff7300" />
-              </BarChart>
-            </ResponsiveContainer>
+            {calculations.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={generateBarChartData()}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="Ore Lorde" fill="#8884d8" />
+                  <Bar dataKey="Ore Nette" fill="#82ca9d" />
+                  <Bar dataKey="Compenso (€)" fill="#ffc658" />
+                  <Bar dataKey="Fatturato (€)" fill="#ff7300" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Nessun dato disponibile
+              </div>
+            )}
           </CardContent>
         </Card>
         
@@ -322,25 +372,31 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             <CardDescription>Compenso e rimborsi</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={generatePieChartData()}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={true}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {generatePieChartData().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `€${Number(value).toFixed(2)}`} />
-              </PieChart>
-            </ResponsiveContainer>
+            {calculations.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={generatePieChartData()}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {generatePieChartData().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `€${Number(value).toFixed(2)}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Nessun dato disponibile
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -352,7 +408,11 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           <CardDescription>Lista degli eventi lavorati</CardDescription>
         </CardHeader>
         <CardContent>
-          {calculations.length > 0 ? (
+          {loading ? (
+            <div className="py-6 text-center">
+              Caricamento dati...
+            </div>
+          ) : calculations.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
