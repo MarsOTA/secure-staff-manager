@@ -8,6 +8,8 @@ import Calendar from "./pages/Calendar";
 import Operators from "./pages/Operators";
 import OperatorProfile from "./pages/OperatorProfile";
 import Clients from "./pages/Clients";
+import ClientCreate from "./pages/ClientCreate";
+import ClientDetail from "./pages/ClientDetail";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EventCreate from "./pages/EventCreate";
@@ -23,11 +25,11 @@ function App() {
       />
       <Route path="/events" element={<ProtectedRoute component={Events} />} />
       <Route
-        path="/event-create"
+        path="/events/create"
         element={<ProtectedRoute component={EventCreate} />}
       />
       <Route
-        path="/event-create/:id"
+        path="/events/create/:id"
         element={<ProtectedRoute component={EventCreate} />}
       />
       <Route
@@ -45,6 +47,14 @@ function App() {
       <Route
         path="/clients"
         element={<ProtectedRoute component={Clients} />}
+      />
+      <Route
+        path="/client-create"
+        element={<ProtectedRoute component={ClientCreate} />}
+      />
+      <Route
+        path="/client-detail/:id"
+        element={<ProtectedRoute component={ClientDetail} />}
       />
     </Routes>
   );
