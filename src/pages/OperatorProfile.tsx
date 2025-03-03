@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -21,7 +20,6 @@ const OperatorProfile = () => {
   const [activeTab, setActiveTab] = useState("info");
   const [contractType, setContractType] = useState("full-time");
   
-  // Load operator data
   useEffect(() => {
     const loadOperator = () => {
       try {
@@ -41,7 +39,6 @@ const OperatorProfile = () => {
           return;
         }
         
-        // Initialize all fields with default values if they don't exist
         const extendedOperator: ExtendedOperator = {
           ...foundOperator,
           rating: foundOperator.rating || 3,
@@ -107,7 +104,6 @@ const OperatorProfile = () => {
         
         setOperator(extendedOperator);
         
-        // Populate preview URLs from stored base64 data
         const previews: Record<string, string> = {};
         if (extendedOperator.resumeFile) previews.resumeFile = extendedOperator.resumeFile;
         if (extendedOperator.idCardFrontImage) previews.idCardFrontImage = extendedOperator.idCardFrontImage;
@@ -205,17 +201,14 @@ const OperatorProfile = () => {
     
     if (file) {
       try {
-        // Convertire il file in base64
         const base64 = await fileToBase64(file);
         
-        // Aggiornare lo stato con il base64 e il nome del file
         setOperator({
           ...operator,
           [field]: base64,
           [fileNameField]: file.name,
         });
         
-        // Aggiornare anche il preview
         setImagePreviewUrls(prev => ({
           ...prev,
           [field]: base64
@@ -227,14 +220,12 @@ const OperatorProfile = () => {
         toast.error(`Errore nel caricamento del file ${file.name}`);
       }
     } else {
-      // Se file è null, rimuovere l'immagine
       setOperator({
         ...operator,
         [field]: null,
         [fileNameField]: "",
       });
       
-      // Rimuovere anche il preview
       setImagePreviewUrls(prev => {
         const newPreviews = { ...prev };
         delete newPreviews[field as string];
@@ -271,7 +262,6 @@ const OperatorProfile = () => {
     if (!operator) return;
 
     try {
-      // Creazione di un testo base per il contratto
       const contractDate = new Date().toLocaleDateString('it-IT');
       
       let contractTypeText = "";
@@ -345,18 +335,15 @@ Il Datore di Lavoro                                   Il Lavoratore
 ___________________                                   ___________________
 `;
 
-      // Creazione di un blob per il download
       const blob = new Blob([contractText], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       
-      // Creazione di un link per il download
       const a = document.createElement('a');
       a.href = url;
       a.download = `Contratto_${operator.name.replace(/\s+/g, '_')}_${contractType}.txt`;
       document.body.appendChild(a);
       a.click();
       
-      // Pulizia
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
