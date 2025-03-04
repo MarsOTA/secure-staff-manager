@@ -5,11 +5,26 @@ import { ExtendedOperator } from "@/types/operator";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Event, PayrollCalculation, PayrollSummary as PayrollSummaryType } from "./payroll/types";
+import { Event, PayrollCalculation, PayrollSummary as PayrollSummaryType, attendanceOptions } from "./payroll/types";
 import PayrollSummary from "./payroll/PayrollSummary";
 import PayrollCharts from "./payroll/PayrollCharts";
 import PayrollTable from "./payroll/PayrollTable";
 import { exportToCSV } from "./payroll/payrollUtils";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -22,6 +37,9 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     totalRevenue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedAttendance, setSelectedAttendance] = useState<string | null>(null);
 
   // Load events and calculate payroll from Supabase
   useEffect(() => {
@@ -86,6 +104,11 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             validStatus = item.events.status as "upcoming" | "in-progress" | "completed" | "cancelled";
           }
           
+          // Check if event is past for automatic attendance
+          const endDate = new Date(item.events.end_date);
+          const now = new Date();
+          const isPast = endDate < now;
+          
           return {
             id: item.events.id,
             title: item.events.title,
@@ -95,7 +118,8 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             location: item.events.location || '',
             status: validStatus,
             hourly_rate: item.hourly_rate || 15,
-            hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25
+            hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25,
+            attendance: isPast && validStatus === "completed" ? "present" : null
           };
         });
         
@@ -104,10 +128,12 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         // Generate payroll calculations
         const payrollData = eventOperatorsData.map(item => {
           const event = item.events;
+          const endDate = new Date(event.end_date);
+          const now = new Date();
+          const isPast = endDate < now;
           
           // In case we need to calculate on our own (fallback)
           const startDate = new Date(event.start_date);
-          const endDate = new Date(event.end_date);
           const totalHours = item.total_hours || (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
           const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
           const hourlyRate = item.hourly_rate || 15;
@@ -126,28 +152,31 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             compensation,
             mealAllowance,
             travelAllowance,
-            totalRevenue
+            totalRevenue,
+            attendance: isPast && event.status === "completed" ? "present" : null
           };
         });
         
         setCalculations(payrollData);
         
-        // Calculate summary totals
-        const summary = payrollData.reduce((acc, curr) => {
-          return {
-            totalGrossHours: acc.totalGrossHours + curr.grossHours,
-            totalNetHours: acc.totalNetHours + curr.netHours,
-            totalCompensation: acc.totalCompensation + curr.compensation,
-            totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
-            totalRevenue: acc.totalRevenue + curr.totalRevenue
-          };
-        }, {
-          totalGrossHours: 0,
-          totalNetHours: 0,
-          totalCompensation: 0,
-          totalAllowances: 0,
-          totalRevenue: 0
-        });
+        // Calculate summary totals - only count events where operator was present
+        const summary = payrollData
+          .filter(calc => calc.attendance === "present" || calc.attendance === "late")
+          .reduce((acc, curr) => {
+            return {
+              totalGrossHours: acc.totalGrossHours + curr.grossHours,
+              totalNetHours: acc.totalNetHours + curr.netHours,
+              totalCompensation: acc.totalCompensation + curr.compensation,
+              totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
+              totalRevenue: acc.totalRevenue + curr.totalRevenue
+            };
+          }, {
+            totalGrossHours: 0,
+            totalNetHours: 0,
+            totalCompensation: 0,
+            totalAllowances: 0,
+            totalRevenue: 0
+          });
         
         setSummaryData(summary);
         
@@ -166,6 +195,70 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     exportToCSV(calculations, summaryData, operator.name);
   };
   
+  const openAttendanceDialog = (event: Event) => {
+    setSelectedEvent(event);
+    setSelectedAttendance(event.attendance || null);
+    setIsAttendanceDialogOpen(true);
+  };
+  
+  const handleAttendanceSubmit = async () => {
+    if (!selectedEvent || !selectedAttendance) {
+      toast.error("Seleziona lo stato di presenza");
+      return;
+    }
+    
+    try {
+      // Update local state
+      setEvents(events.map(e => 
+        e.id === selectedEvent.id 
+          ? { ...e, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          : e
+      ));
+      
+      setCalculations(calculations.map(calc => 
+        calc.eventId === selectedEvent.id 
+          ? { ...calc, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          : calc
+      ));
+      
+      // Calculate new summary if attendance changed to/from present or late
+      const newCalculations = calculations.map(calc => 
+        calc.eventId === selectedEvent.id 
+          ? { ...calc, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          : calc
+      );
+      
+      const newSummary = newCalculations
+        .filter(calc => calc.attendance === "present" || calc.attendance === "late")
+        .reduce((acc, curr) => {
+          return {
+            totalGrossHours: acc.totalGrossHours + curr.grossHours,
+            totalNetHours: acc.totalNetHours + curr.netHours,
+            totalCompensation: acc.totalCompensation + curr.compensation,
+            totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
+            totalRevenue: acc.totalRevenue + curr.totalRevenue
+          };
+        }, {
+          totalGrossHours: 0,
+          totalNetHours: 0,
+          totalCompensation: 0,
+          totalAllowances: 0,
+          totalRevenue: 0
+        });
+      
+      setSummaryData(newSummary);
+      
+      // Update database (this is where you'd send attendance to Supabase)
+      // For now, we're just simulating the updated attendance in local state
+      
+      toast.success("Presenza aggiornata con successo");
+      setIsAttendanceDialogOpen(false);
+    } catch (error) {
+      console.error("Errore nell'aggiornamento della presenza:", error);
+      toast.error("Errore nell'aggiornamento della presenza");
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -179,12 +272,12 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
       {/* Summary Cards */}
       <PayrollSummary 
         summaryData={summaryData} 
-        eventCount={events.length} 
+        eventCount={events.filter(e => e.attendance === "present" || e.attendance === "late").length} 
       />
       
       {/* Charts */}
       <PayrollCharts 
-        calculations={calculations} 
+        calculations={calculations.filter(c => c.attendance === "present" || c.attendance === "late")} 
         totalCompensation={summaryData.totalCompensation} 
       />
       
@@ -193,7 +286,61 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         calculations={calculations} 
         summaryData={summaryData} 
         loading={loading} 
+        onAttendanceClick={openAttendanceDialog}
+        attendanceOptions={attendanceOptions}
       />
+      
+      {/* Attendance Dialog */}
+      <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registra presenza</DialogTitle>
+          </DialogHeader>
+          
+          {selectedEvent && (
+            <div className="py-4">
+              <div className="mb-4">
+                <h3 className="font-medium">{selectedEvent.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(selectedEvent.start_date).toLocaleDateString('it-IT')} - {selectedEvent.client}
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="attendance">Stato di presenza</Label>
+                  <Select 
+                    value={selectedAttendance || ''} 
+                    onValueChange={setSelectedAttendance}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona stato" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {attendanceOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${option.color}`}>
+                            {option.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAttendanceDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleAttendanceSubmit}>
+              Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

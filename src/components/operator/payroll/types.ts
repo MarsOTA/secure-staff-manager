@@ -12,6 +12,7 @@ export interface Event {
   hourly_rate?: number;
   hourly_rate_sell?: number;
   status?: "upcoming" | "in-progress" | "completed" | "cancelled";
+  attendance?: "present" | "absent" | "late" | null;
 }
 
 // Define the payroll calculation type
@@ -26,6 +27,7 @@ export interface PayrollCalculation {
   mealAllowance: number;
   travelAllowance: number;
   totalRevenue: number;
+  attendance?: "present" | "absent" | "late" | null;
 }
 
 export interface PayrollSummary {
@@ -35,3 +37,10 @@ export interface PayrollSummary {
   totalAllowances: number;
   totalRevenue: number;
 }
+
+// Define attendance options
+export const attendanceOptions = [
+  { value: "present", label: "Presente", color: "bg-green-100 text-green-800" },
+  { value: "late", label: "In ritardo", color: "bg-yellow-100 text-yellow-800" },
+  { value: "absent", label: "Assente", color: "bg-red-100 text-red-800" }
+];
