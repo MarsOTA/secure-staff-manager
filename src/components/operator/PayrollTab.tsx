@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ExtendedOperator } from "@/types/operator";
@@ -117,8 +116,8 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           const now = new Date();
           const isPast = endDate < now;
           
-          // Default attendance value for completed past events
-          const attendanceValue = isPast && validStatus === "completed" ? "present" : null;
+          // Default attendance value for completed past events with proper type validation
+          const attendanceValue = isPast && validStatus === "completed" ? "present" as const : null;
           
           return {
             id: item.events.id,
@@ -153,8 +152,8 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           const travelAllowance = item.travel_allowance || 15;
           const totalRevenue = item.revenue_generated || (netHours * (item.hourly_rate * 1.667)); // Default margin
           
-          // Default attendance for completed past events
-          const attendanceValue = isPast && event.status === "completed" ? "present" : null;
+          // Default attendance for completed past events with proper type validation
+          const attendanceValue = isPast && event.status === "completed" ? "present" as const : null;
           
           return {
             eventId: event.id,
