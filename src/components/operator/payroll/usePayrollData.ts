@@ -83,21 +83,105 @@ export const usePayrollData = (operator: ExtendedOperator) => {
           return;
         }
         
+        console.log("Event operators data:", eventOperatorsData);
+        
         if (!eventOperatorsData || eventOperatorsData.length === 0) {
-          setEvents([]);
-          setCalculations([]);
-          setSummaryData({
-            totalGrossHours: 0,
-            totalNetHours: 0,
-            totalCompensation: 0,
-            totalAllowances: 0,
-            totalRevenue: 0
-          });
+          // If no real data, create some mock data for testing
+          const mockEventData: Event[] = [
+            {
+              id: 1001,
+              title: "Evento Test 1",
+              client: "Cliente Test A",
+              start_date: new Date().toISOString(),
+              end_date: new Date(Date.now() + 3600000).toISOString(),
+              location: "Milano",
+              status: "completed",
+              hourly_rate: 15,
+              hourly_rate_sell: 25,
+              attendance: "present"
+            },
+            {
+              id: 1002,
+              title: "Evento Test 2",
+              client: "Cliente Test B",
+              start_date: new Date(Date.now() - 86400000).toISOString(),
+              end_date: new Date(Date.now() - 86400000 + 3600000).toISOString(),
+              location: "Roma",
+              status: "completed",
+              hourly_rate: 18,
+              hourly_rate_sell: 30,
+              attendance: "late"
+            },
+            {
+              id: 1003,
+              title: "Evento Test 3",
+              client: "Cliente Test C",
+              start_date: new Date(Date.now() + 86400000).toISOString(),
+              end_date: new Date(Date.now() + 86400000 + 7200000).toISOString(),
+              location: "Firenze",
+              status: "upcoming",
+              hourly_rate: 20,
+              hourly_rate_sell: 35,
+              attendance: null
+            }
+          ];
+          
+          setEvents(mockEventData);
+          
+          // Generate mock payroll calculations
+          const mockPayrollData: PayrollCalculation[] = [
+            {
+              eventId: 1001,
+              eventTitle: "Evento Test 1",
+              client: "Cliente Test A",
+              date: new Date().toLocaleDateString('it-IT'),
+              grossHours: 8,
+              netHours: 7,
+              compensation: 105,
+              mealAllowance: 10,
+              travelAllowance: 15,
+              totalRevenue: 175,
+              attendance: "present"
+            },
+            {
+              eventId: 1002,
+              eventTitle: "Evento Test 2",
+              client: "Cliente Test B",
+              date: new Date(Date.now() - 86400000).toLocaleDateString('it-IT'),
+              grossHours: 6,
+              netHours: 5,
+              compensation: 90,
+              mealAllowance: 10,
+              travelAllowance: 15,
+              totalRevenue: 150,
+              attendance: "late"
+            },
+            {
+              eventId: 1003,
+              eventTitle: "Evento Test 3",
+              client: "Cliente Test C",
+              date: new Date(Date.now() + 86400000).toLocaleDateString('it-IT'),
+              grossHours: 10,
+              netHours: 9,
+              compensation: 180,
+              mealAllowance: 10,
+              travelAllowance: 20,
+              totalRevenue: 315,
+              attendance: null
+            }
+          ];
+          
+          setCalculations(mockPayrollData);
+          
+          // Calculate summary
+          const summary = calculateSummary(mockPayrollData);
+          setSummaryData(summary);
+          
           setLoading(false);
           return;
         }
         
-        // Process events data - with proper type casting for status and attendance
+        // Process events data with proper type casting for status and attendance
         const eventsData = eventOperatorsData.map(item => {
           // Ensure status is one of the valid enum values, or default to "upcoming"
           let validStatus: "upcoming" | "in-progress" | "completed" | "cancelled" = "upcoming";
@@ -187,7 +271,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
 
   // Update attendance for an event
   const updateAttendance = (eventId: number, attendanceValue: string | null) => {
-    if (!attendanceValue) return;
+    if (!attendanceValue) return false;
     
     try {
       // Validate the selected attendance

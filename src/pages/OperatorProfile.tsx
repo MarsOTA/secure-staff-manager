@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -20,7 +19,15 @@ const OperatorProfile = () => {
   const [loading, setLoading] = useState(true);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState("info");
+  
   const [contractType, setContractType] = useState("full-time");
+  const [ccnl, setCcnl] = useState("pulizia-multiservizi");
+  const [level, setLevel] = useState("");
+  const [employmentType, setEmploymentType] = useState("indeterminato");
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [grossSalary, setGrossSalary] = useState("");
+  const [netSalary, setNetSalary] = useState("");
   
   useEffect(() => {
     const loadOperator = () => {
@@ -117,6 +124,24 @@ const OperatorProfile = () => {
         if (extendedOperator.fullBodyPhotoFile) previews.fullBodyPhotoFile = extendedOperator.fullBodyPhotoFile;
         
         setImagePreviewUrls(previews);
+        
+        if (extendedOperator.contractData) {
+          setContractType(extendedOperator.contractData.contractType || "full-time");
+          setCcnl(extendedOperator.contractData.ccnl || "pulizia-multiservizi");
+          setLevel(extendedOperator.contractData.level || "");
+          setEmploymentType(extendedOperator.contractData.employmentType || "indeterminato");
+          
+          if (extendedOperator.contractData.startDate) {
+            setStartDate(new Date(extendedOperator.contractData.startDate));
+          }
+          
+          if (extendedOperator.contractData.endDate) {
+            setEndDate(new Date(extendedOperator.contractData.endDate));
+          }
+          
+          setGrossSalary(extendedOperator.contractData.grossSalary || "");
+          setNetSalary(extendedOperator.contractData.netSalary || "");
+        }
       } catch (error) {
         console.error("Errore nel caricamento dell'operatore:", error);
         toast.error("Errore nel caricamento dell'operatore");
@@ -240,6 +265,20 @@ const OperatorProfile = () => {
     if (!operator) return;
     
     try {
+      const updatedOperator = {
+        ...operator,
+        contractData: {
+          contractType,
+          ccnl,
+          level,
+          employmentType,
+          startDate: startDate ? startDate.toISOString() : null,
+          endDate: endDate ? endDate.toISOString() : null,
+          grossSalary,
+          netSalary
+        }
+      };
+      
       const storedOperators = localStorage.getItem(OPERATORS_STORAGE_KEY);
       if (!storedOperators) {
         toast.error("Errore nel salvataggio dell'operatore");
@@ -248,12 +287,12 @@ const OperatorProfile = () => {
       
       const operators = JSON.parse(storedOperators);
       const updatedOperators = operators.map((op: any) => 
-        op.id === operator.id ? operator : op
+        op.id === updatedOperator.id ? updatedOperator : op
       );
       
       localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(updatedOperators));
+      setOperator(updatedOperator);
       toast.success("Profilo operatore aggiornato con successo");
-      navigate("/operators");
     } catch (error) {
       console.error("Errore nel salvataggio dell'operatore:", error);
       toast.error("Errore nel salvataggio dell'operatore");
@@ -352,6 +391,7 @@ ___________________                                   ___________________
       }, 0);
       
       toast.success("Contratto generato con successo");
+      handleSave();
     } catch (error) {
       console.error("Errore nella generazione del contratto:", error);
       toast.error("Errore nella generazione del contratto");
@@ -422,6 +462,21 @@ ___________________                                   ___________________
               contractType={contractType}
               onContractTypeChange={setContractType}
               onGenerateContract={generateContract}
+              ccnl={ccnl}
+              setCcnl={setCcnl}
+              level={level}
+              setLevel={setLevel}
+              employmentType={employmentType}
+              setEmploymentType={setEmploymentType}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              endDate={endDate}
+              setEndDate={setEndDate}
+              grossSalary={grossSalary}
+              setGrossSalary={setGrossSalary}
+              netSalary={netSalary}
+              setNetSalary={setNetSalary}
+              onSave={handleSave}
             />
           </TabsContent>
 

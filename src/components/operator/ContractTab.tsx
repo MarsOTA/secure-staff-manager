@@ -1,14 +1,14 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { ExtendedOperator, CONTRACT_TYPES } from "@/types/operator";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, CalendarIcon } from "lucide-react";
+import { Download, CalendarIcon, Save } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -18,23 +18,44 @@ interface ContractTabProps {
   contractType: string;
   onContractTypeChange: (value: string) => void;
   onGenerateContract: () => void;
+  ccnl: string;
+  setCcnl: (value: string) => void;
+  level: string;
+  setLevel: (value: string) => void;
+  employmentType: string;
+  setEmploymentType: (value: string) => void;
+  startDate: Date | undefined;
+  setStartDate: (date: Date | undefined) => void;
+  endDate: Date | undefined;
+  setEndDate: (date: Date | undefined) => void;
+  grossSalary: string;
+  setGrossSalary: (value: string) => void;
+  netSalary: string;
+  setNetSalary: (value: string) => void;
+  onSave: () => void;
 }
 
 const ContractTab: React.FC<ContractTabProps> = ({
   operator,
   contractType,
   onContractTypeChange,
-  onGenerateContract
+  onGenerateContract,
+  ccnl,
+  setCcnl,
+  level,
+  setLevel,
+  employmentType,
+  setEmploymentType,
+  startDate,
+  setStartDate,
+  endDate,
+  setEndDate,
+  grossSalary,
+  setGrossSalary,
+  netSalary,
+  setNetSalary,
+  onSave
 }) => {
-  // New state for additional contract fields
-  const [ccnl, setCcnl] = useState("pulizia-multiservizi");
-  const [level, setLevel] = useState("");
-  const [employmentType, setEmploymentType] = useState("indeterminato");
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [grossSalary, setGrossSalary] = useState("");
-  const [netSalary, setNetSalary] = useState("");
-
   return (
     <div className="space-y-6">
       <Card>
@@ -194,15 +215,19 @@ const ContractTab: React.FC<ContractTabProps> = ({
                 />
               </div>
             </div>
-            
-            <div className="pt-4">
-              <Button onClick={onGenerateContract} className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                Genera Contratto
-              </Button>
-            </div>
           </div>
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button onClick={onSave} variant="outline">
+            <Save className="mr-2 h-4 w-4" />
+            Salva Dati
+          </Button>
+          
+          <Button onClick={onGenerateContract}>
+            <Download className="mr-2 h-4 w-4" />
+            Genera Contratto
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

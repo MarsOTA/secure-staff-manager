@@ -1,4 +1,3 @@
-
 // Shared operator types
 export interface ExtendedOperator {
   id: number;
@@ -84,6 +83,18 @@ export interface ExtendedOperator {
   facebook?: string;
   tiktok?: string;
   linkedin?: string;
+  
+  // Contract data
+  contractData?: {
+    contractType: string;
+    ccnl: string;
+    level: string;
+    employmentType: string;
+    startDate: string | null;
+    endDate: string | null;
+    grossSalary: string;
+    netSalary: string;
+  };
 }
 
 // Constants for multi-select fields
