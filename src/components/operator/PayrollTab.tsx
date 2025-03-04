@@ -41,6 +41,14 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedAttendance, setSelectedAttendance] = useState<string | null>(null);
 
+  // Helper function to validate attendance value
+  const validateAttendance = (value: any): "present" | "absent" | "late" | null => {
+    if (value === "present" || value === "absent" || value === "late") {
+      return value;
+    }
+    return null;
+  };
+
   // Load events and calculate payroll from Supabase
   useEffect(() => {
     const loadEvents = async () => {
@@ -92,7 +100,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           return;
         }
         
-        // Process events data - with proper type casting for status
+        // Process events data - with proper type casting for status and attendance
         const eventsData = eventOperatorsData.map(item => {
           // Ensure status is one of the valid enum values, or default to "upcoming"
           let validStatus: "upcoming" | "in-progress" | "completed" | "cancelled" = "upcoming";
@@ -109,6 +117,9 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           const now = new Date();
           const isPast = endDate < now;
           
+          // Default attendance value for completed past events
+          const attendanceValue = isPast && validStatus === "completed" ? "present" : null;
+          
           return {
             id: item.events.id,
             title: item.events.title,
@@ -119,7 +130,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             status: validStatus,
             hourly_rate: item.hourly_rate || 15,
             hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25,
-            attendance: isPast && validStatus === "completed" ? "present" : null
+            attendance: attendanceValue
           };
         });
         
@@ -142,6 +153,9 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           const travelAllowance = item.travel_allowance || 15;
           const totalRevenue = item.revenue_generated || (netHours * (item.hourly_rate * 1.667)); // Default margin
           
+          // Default attendance for completed past events
+          const attendanceValue = isPast && event.status === "completed" ? "present" : null;
+          
           return {
             eventId: event.id,
             eventTitle: event.title,
@@ -153,7 +167,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
             mealAllowance,
             travelAllowance,
             totalRevenue,
-            attendance: isPast && event.status === "completed" ? "present" : null
+            attendance: attendanceValue
           };
         });
         
@@ -208,23 +222,26 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     }
     
     try {
+      // Validate the selected attendance
+      const validAttendance = validateAttendance(selectedAttendance);
+      
       // Update local state
       setEvents(events.map(e => 
         e.id === selectedEvent.id 
-          ? { ...e, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          ? { ...e, attendance: validAttendance } 
           : e
       ));
       
       setCalculations(calculations.map(calc => 
         calc.eventId === selectedEvent.id 
-          ? { ...calc, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          ? { ...calc, attendance: validAttendance } 
           : calc
       ));
       
       // Calculate new summary if attendance changed to/from present or late
       const newCalculations = calculations.map(calc => 
         calc.eventId === selectedEvent.id 
-          ? { ...calc, attendance: selectedAttendance as "present" | "absent" | "late" | null } 
+          ? { ...calc, attendance: validAttendance } 
           : calc
       );
       
