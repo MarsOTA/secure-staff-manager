@@ -128,18 +128,30 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           return;
         }
         
-        // Process events data
-        const eventsData = eventOperatorsData.map(item => ({
-          id: item.events.id,
-          title: item.events.title,
-          client: item.events.clients?.name || 'Cliente sconosciuto',
-          start_date: item.events.start_date,
-          end_date: item.events.end_date,
-          location: item.events.location || '',
-          status: item.events.status,
-          hourly_rate: item.hourly_rate || 15,
-          hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25
-        }));
+        // Process events data - with proper type casting for status
+        const eventsData = eventOperatorsData.map(item => {
+          // Ensure status is one of the valid enum values, or default to "upcoming"
+          let validStatus: "upcoming" | "in-progress" | "completed" | "cancelled" = "upcoming";
+          
+          if (item.events.status === "upcoming" || 
+              item.events.status === "in-progress" || 
+              item.events.status === "completed" || 
+              item.events.status === "cancelled") {
+            validStatus = item.events.status as "upcoming" | "in-progress" | "completed" | "cancelled";
+          }
+          
+          return {
+            id: item.events.id,
+            title: item.events.title,
+            client: item.events.clients?.name || 'Cliente sconosciuto',
+            start_date: item.events.start_date,
+            end_date: item.events.end_date,
+            location: item.events.location || '',
+            status: validStatus,
+            hourly_rate: item.hourly_rate || 15,
+            hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25
+          };
+        });
         
         setEvents(eventsData);
         
