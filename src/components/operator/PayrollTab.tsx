@@ -1,208 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+
+import React, { useState } from "react";
 import { ExtendedOperator } from "@/types/operator";
-import { FileDown } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { Event, PayrollCalculation, PayrollSummary as PayrollSummaryType, attendanceOptions } from "./payroll/types";
+import { Event, attendanceOptions } from "./payroll/types";
+import { exportToCSV } from "./payroll/payrollUtils";
+import { usePayrollData } from "./payroll/usePayrollData";
 import PayrollSummary from "./payroll/PayrollSummary";
 import PayrollCharts from "./payroll/PayrollCharts";
 import PayrollTable from "./payroll/PayrollTable";
-import { exportToCSV } from "./payroll/payrollUtils";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
-} from "@/components/ui/dialog";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import PayrollHeader from "./payroll/PayrollHeader";
+import AttendanceDialog from "./payroll/AttendanceDialog";
+import { toast } from "sonner";
 
 const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [calculations, setCalculations] = useState<PayrollCalculation[]>([]);
-  const [summaryData, setSummaryData] = useState<PayrollSummaryType>({
-    totalGrossHours: 0,
-    totalNetHours: 0,
-    totalCompensation: 0,
-    totalAllowances: 0,
-    totalRevenue: 0
-  });
-  const [loading, setLoading] = useState(true);
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [selectedAttendance, setSelectedAttendance] = useState<string | null>(null);
-
-  // Helper function to validate attendance value
-  const validateAttendance = (value: any): "present" | "absent" | "late" | null => {
-    if (value === "present" || value === "absent" || value === "late") {
-      return value;
-    }
-    return null;
-  };
-
-  // Load events and calculate payroll from Supabase
-  useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch events and event_operators data for this operator
-        const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
-          .from('event_operators')
-          .select(`
-            id,
-            event_id,
-            hourly_rate,
-            total_hours,
-            net_hours,
-            meal_allowance,
-            travel_allowance,
-            total_compensation,
-            revenue_generated,
-            events(
-              id,
-              title,
-              start_date,
-              end_date,
-              location,
-              status,
-              clients(name)
-            )
-          `)
-          .eq('operator_id', operator.id);
-        
-        if (eventOperatorsError) {
-          console.error("Errore nel caricamento degli eventi:", eventOperatorsError);
-          toast.error("Errore nel caricamento degli eventi");
-          return;
-        }
-        
-        if (!eventOperatorsData || eventOperatorsData.length === 0) {
-          setEvents([]);
-          setCalculations([]);
-          setSummaryData({
-            totalGrossHours: 0,
-            totalNetHours: 0,
-            totalCompensation: 0,
-            totalAllowances: 0,
-            totalRevenue: 0
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Process events data - with proper type casting for status and attendance
-        const eventsData = eventOperatorsData.map(item => {
-          // Ensure status is one of the valid enum values, or default to "upcoming"
-          let validStatus: "upcoming" | "in-progress" | "completed" | "cancelled" = "upcoming";
-          
-          if (item.events.status === "upcoming" || 
-              item.events.status === "in-progress" || 
-              item.events.status === "completed" || 
-              item.events.status === "cancelled") {
-            validStatus = item.events.status as "upcoming" | "in-progress" | "completed" | "cancelled";
-          }
-          
-          // Check if event is past for automatic attendance
-          const endDate = new Date(item.events.end_date);
-          const now = new Date();
-          const isPast = endDate < now;
-          
-          // Default attendance value for completed past events with proper type validation
-          const attendanceValue = isPast && validStatus === "completed" ? "present" as const : null;
-          
-          return {
-            id: item.events.id,
-            title: item.events.title,
-            client: item.events.clients?.name || 'Cliente sconosciuto',
-            start_date: item.events.start_date,
-            end_date: item.events.end_date,
-            location: item.events.location || '',
-            status: validStatus,
-            hourly_rate: item.hourly_rate || 15,
-            hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25,
-            attendance: attendanceValue
-          };
-        });
-        
-        setEvents(eventsData);
-        
-        // Generate payroll calculations
-        const payrollData = eventOperatorsData.map(item => {
-          const event = item.events;
-          const endDate = new Date(event.end_date);
-          const now = new Date();
-          const isPast = endDate < now;
-          
-          // In case we need to calculate on our own (fallback)
-          const startDate = new Date(event.start_date);
-          const totalHours = item.total_hours || (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
-          const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
-          const hourlyRate = item.hourly_rate || 15;
-          const compensation = item.total_compensation || (netHours * hourlyRate);
-          const mealAllowance = item.meal_allowance || (totalHours > 5 ? 10 : 0);
-          const travelAllowance = item.travel_allowance || 15;
-          const totalRevenue = item.revenue_generated || (netHours * (item.hourly_rate * 1.667)); // Default margin
-          
-          // Default attendance for completed past events with proper type validation
-          const attendanceValue = isPast && event.status === "completed" ? "present" as const : null;
-          
-          return {
-            eventId: event.id,
-            eventTitle: event.title,
-            client: event.clients?.name || 'Cliente sconosciuto',
-            date: new Date(event.start_date).toLocaleDateString('it-IT'),
-            grossHours: totalHours,
-            netHours,
-            compensation,
-            mealAllowance,
-            travelAllowance,
-            totalRevenue,
-            attendance: attendanceValue
-          };
-        });
-        
-        setCalculations(payrollData);
-        
-        // Calculate summary totals - only count events where operator was present
-        const summary = payrollData
-          .filter(calc => calc.attendance === "present" || calc.attendance === "late")
-          .reduce((acc, curr) => {
-            return {
-              totalGrossHours: acc.totalGrossHours + curr.grossHours,
-              totalNetHours: acc.totalNetHours + curr.netHours,
-              totalCompensation: acc.totalCompensation + curr.compensation,
-              totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
-              totalRevenue: acc.totalRevenue + curr.totalRevenue
-            };
-          }, {
-            totalGrossHours: 0,
-            totalNetHours: 0,
-            totalCompensation: 0,
-            totalAllowances: 0,
-            totalRevenue: 0
-          });
-        
-        setSummaryData(summary);
-        
-      } catch (error) {
-        console.error("Errore nel caricamento degli eventi:", error);
-        toast.error("Errore nel caricamento degli eventi");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadEvents();
-  }, [operator.id]);
+  
+  const {
+    events,
+    calculations,
+    summaryData,
+    loading,
+    updateAttendance
+  } = usePayrollData(operator);
   
   const handleExportCSV = () => {
     exportToCSV(calculations, summaryData, operator.name);
@@ -210,80 +29,28 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   
   const openAttendanceDialog = (event: Event) => {
     setSelectedEvent(event);
-    setSelectedAttendance(event.attendance || null);
     setIsAttendanceDialogOpen(true);
   };
   
-  const handleAttendanceSubmit = async () => {
-    if (!selectedEvent || !selectedAttendance) {
+  const handleAttendanceSubmit = (eventId: number, attendanceValue: string | null) => {
+    if (!attendanceValue) {
       toast.error("Seleziona lo stato di presenza");
       return;
     }
     
-    try {
-      // Validate the selected attendance
-      const validAttendance = validateAttendance(selectedAttendance);
-      
-      // Update local state
-      setEvents(events.map(e => 
-        e.id === selectedEvent.id 
-          ? { ...e, attendance: validAttendance } 
-          : e
-      ));
-      
-      setCalculations(calculations.map(calc => 
-        calc.eventId === selectedEvent.id 
-          ? { ...calc, attendance: validAttendance } 
-          : calc
-      ));
-      
-      // Calculate new summary if attendance changed to/from present or late
-      const newCalculations = calculations.map(calc => 
-        calc.eventId === selectedEvent.id 
-          ? { ...calc, attendance: validAttendance } 
-          : calc
-      );
-      
-      const newSummary = newCalculations
-        .filter(calc => calc.attendance === "present" || calc.attendance === "late")
-        .reduce((acc, curr) => {
-          return {
-            totalGrossHours: acc.totalGrossHours + curr.grossHours,
-            totalNetHours: acc.totalNetHours + curr.netHours,
-            totalCompensation: acc.totalCompensation + curr.compensation,
-            totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
-            totalRevenue: acc.totalRevenue + curr.totalRevenue
-          };
-        }, {
-          totalGrossHours: 0,
-          totalNetHours: 0,
-          totalCompensation: 0,
-          totalAllowances: 0,
-          totalRevenue: 0
-        });
-      
-      setSummaryData(newSummary);
-      
-      // Update database (this is where you'd send attendance to Supabase)
-      // For now, we're just simulating the updated attendance in local state
-      
-      toast.success("Presenza aggiornata con successo");
+    const success = updateAttendance(eventId, attendanceValue);
+    if (success) {
       setIsAttendanceDialogOpen(false);
-    } catch (error) {
-      console.error("Errore nell'aggiornamento della presenza:", error);
-      toast.error("Errore nell'aggiornamento della presenza");
     }
   };
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Payroll {operator.name}</h2>
-        <Button onClick={handleExportCSV} className="flex items-center gap-2">
-          <FileDown className="h-4 w-4" />
-          Esporta CSV
-        </Button>
-      </div>
+      {/* Header */}
+      <PayrollHeader 
+        operatorName={operator.name}
+        onExportCSV={handleExportCSV}
+      />
       
       {/* Summary Cards */}
       <PayrollSummary 
@@ -307,56 +74,12 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
       />
       
       {/* Attendance Dialog */}
-      <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Registra presenza</DialogTitle>
-          </DialogHeader>
-          
-          {selectedEvent && (
-            <div className="py-4">
-              <div className="mb-4">
-                <h3 className="font-medium">{selectedEvent.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {new Date(selectedEvent.start_date).toLocaleDateString('it-IT')} - {selectedEvent.client}
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="attendance">Stato di presenza</Label>
-                  <Select 
-                    value={selectedAttendance || ''} 
-                    onValueChange={setSelectedAttendance}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona stato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {attendanceOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${option.color}`}>
-                            {option.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAttendanceDialogOpen(false)}>
-              Annulla
-            </Button>
-            <Button onClick={handleAttendanceSubmit}>
-              Salva
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AttendanceDialog
+        isOpen={isAttendanceDialogOpen}
+        onOpenChange={setIsAttendanceDialogOpen}
+        selectedEvent={selectedEvent}
+        onSubmit={handleAttendanceSubmit}
+      />
     </div>
   );
 };
