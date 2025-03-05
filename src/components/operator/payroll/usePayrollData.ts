@@ -30,9 +30,10 @@ export const usePayrollData = (operator: ExtendedOperator) => {
     return calculationsData
       .filter(calc => calc.attendance === "present" || calc.attendance === "late")
       .reduce((acc, curr) => {
+        const hoursToUse = curr.actual_hours || curr.netHours;
         return {
-          totalGrossHours: acc.totalGrossHours + curr.grossHours,
-          totalNetHours: acc.totalNetHours + curr.netHours,
+          totalGrossHours: acc.totalGrossHours + (curr.actual_hours || curr.grossHours),
+          totalNetHours: acc.totalNetHours + hoursToUse,
           totalCompensation: acc.totalCompensation + curr.compensation,
           totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
           totalRevenue: acc.totalRevenue + curr.totalRevenue
@@ -51,6 +52,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
     const loadEvents = async () => {
       try {
         setLoading(true);
+        console.log("Loading events for operator ID:", operator.id);
         
         // Fetch events and event_operators data for this operator
         const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
@@ -80,109 +82,43 @@ export const usePayrollData = (operator: ExtendedOperator) => {
         if (eventOperatorsError) {
           console.error("Errore nel caricamento degli eventi:", eventOperatorsError);
           toast.error("Errore nel caricamento degli eventi");
+          setEvents([]);
+          setCalculations([]);
+          setSummaryData({
+            totalGrossHours: 0,
+            totalNetHours: 0,
+            totalCompensation: 0,
+            totalAllowances: 0,
+            totalRevenue: 0
+          });
+          setLoading(false);
           return;
         }
         
         console.log("Event operators data:", eventOperatorsData);
         
         if (!eventOperatorsData || eventOperatorsData.length === 0) {
-          // If no real data, create some mock data for testing
-          const mockEventData: Event[] = [
-            {
-              id: 1001,
-              title: "Evento Test 1",
-              client: "Cliente Test A",
-              start_date: new Date().toISOString(),
-              end_date: new Date(Date.now() + 3600000).toISOString(),
-              location: "Milano",
-              status: "completed",
-              hourly_rate: 15,
-              hourly_rate_sell: 25,
-              attendance: "present"
-            },
-            {
-              id: 1002,
-              title: "Evento Test 2",
-              client: "Cliente Test B",
-              start_date: new Date(Date.now() - 86400000).toISOString(),
-              end_date: new Date(Date.now() - 86400000 + 3600000).toISOString(),
-              location: "Roma",
-              status: "completed",
-              hourly_rate: 18,
-              hourly_rate_sell: 30,
-              attendance: "late"
-            },
-            {
-              id: 1003,
-              title: "Evento Test 3",
-              client: "Cliente Test C",
-              start_date: new Date(Date.now() + 86400000).toISOString(),
-              end_date: new Date(Date.now() + 86400000 + 7200000).toISOString(),
-              location: "Firenze",
-              status: "upcoming",
-              hourly_rate: 20,
-              hourly_rate_sell: 35,
-              attendance: null
-            }
-          ];
-          
-          setEvents(mockEventData);
-          
-          // Generate mock payroll calculations
-          const mockPayrollData: PayrollCalculation[] = [
-            {
-              eventId: 1001,
-              eventTitle: "Evento Test 1",
-              client: "Cliente Test A",
-              date: new Date().toLocaleDateString('it-IT'),
-              grossHours: 8,
-              netHours: 7,
-              compensation: 105,
-              mealAllowance: 10,
-              travelAllowance: 15,
-              totalRevenue: 175,
-              attendance: "present"
-            },
-            {
-              eventId: 1002,
-              eventTitle: "Evento Test 2",
-              client: "Cliente Test B",
-              date: new Date(Date.now() - 86400000).toLocaleDateString('it-IT'),
-              grossHours: 6,
-              netHours: 5,
-              compensation: 90,
-              mealAllowance: 10,
-              travelAllowance: 15,
-              totalRevenue: 150,
-              attendance: "late"
-            },
-            {
-              eventId: 1003,
-              eventTitle: "Evento Test 3",
-              client: "Cliente Test C",
-              date: new Date(Date.now() + 86400000).toLocaleDateString('it-IT'),
-              grossHours: 10,
-              netHours: 9,
-              compensation: 180,
-              mealAllowance: 10,
-              travelAllowance: 20,
-              totalRevenue: 315,
-              attendance: null
-            }
-          ];
-          
-          setCalculations(mockPayrollData);
-          
-          // Calculate summary
-          const summary = calculateSummary(mockPayrollData);
-          setSummaryData(summary);
-          
+          // No events found
+          setEvents([]);
+          setCalculations([]);
+          setSummaryData({
+            totalGrossHours: 0,
+            totalNetHours: 0,
+            totalCompensation: 0,
+            totalAllowances: 0,
+            totalRevenue: 0
+          });
           setLoading(false);
           return;
         }
         
         // Process events data with proper type casting for status and attendance
         const eventsData = eventOperatorsData.map(item => {
+          if (!item.events) {
+            console.warn("Event data missing for event_operator entry:", item);
+            return null;
+          }
+          
           // Ensure status is one of the valid enum values, or default to "upcoming"
           let validStatus: "upcoming" | "in-progress" | "completed" | "cancelled" = "upcoming";
           
@@ -211,28 +147,33 @@ export const usePayrollData = (operator: ExtendedOperator) => {
             status: validStatus,
             hourly_rate: item.hourly_rate || 15,
             hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25,
-            attendance: attendanceValue
+            attendance: attendanceValue,
+            estimated_hours: item.total_hours || 0
           };
-        });
+        }).filter(Boolean) as Event[];
         
         setEvents(eventsData);
         
         // Generate payroll calculations
         const payrollData = eventOperatorsData.map(item => {
+          if (!item.events) {
+            console.warn("Event data missing for calculation:", item);
+            return null;
+          }
+          
           const event = item.events;
           const endDate = new Date(event.end_date);
           const now = new Date();
           const isPast = endDate < now;
           
-          // In case we need to calculate on our own (fallback)
-          const startDate = new Date(event.start_date);
-          const totalHours = item.total_hours || (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+          // Use provided hours from database first
+          const totalHours = item.total_hours || 0;
           const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
           const hourlyRate = item.hourly_rate || 15;
           const compensation = item.total_compensation || (netHours * hourlyRate);
           const mealAllowance = item.meal_allowance || (totalHours > 5 ? 10 : 0);
           const travelAllowance = item.travel_allowance || 15;
-          const totalRevenue = item.revenue_generated || (netHours * (item.hourly_rate * 1.667)); // Default margin
+          const totalRevenue = item.revenue_generated || (netHours * (hourlyRate * 1.667)); // Default margin
           
           // Default attendance for completed past events with proper type validation
           const attendanceValue = isPast && event.status === "completed" ? "present" as const : null;
@@ -248,9 +189,11 @@ export const usePayrollData = (operator: ExtendedOperator) => {
             mealAllowance,
             travelAllowance,
             totalRevenue,
-            attendance: attendanceValue
+            attendance: attendanceValue,
+            estimated_hours: totalHours,
+            actual_hours: undefined // Will be set by user
           };
-        });
+        }).filter(Boolean) as PayrollCalculation[];
         
         setCalculations(payrollData);
         
@@ -309,11 +252,55 @@ export const usePayrollData = (operator: ExtendedOperator) => {
     }
   };
 
+  // Update actual hours for an event
+  const updateActualHours = (eventId: number, actualHours: number) => {
+    try {
+      // Update calculations with the new actual hours
+      const updatedCalculations = calculations.map(calc => {
+        if (calc.eventId === eventId) {
+          // Update compensation and revenue based on actual hours
+          const hourlyRate = calc.compensation / (calc.netHours || 1);
+          const newCompensation = actualHours * hourlyRate;
+          const newRevenue = actualHours * (calc.totalRevenue / (calc.netHours || 1));
+          
+          return { 
+            ...calc, 
+            actual_hours: actualHours,
+            compensation: newCompensation,
+            totalRevenue: newRevenue
+          };
+        }
+        return calc;
+      });
+      
+      setCalculations(updatedCalculations);
+      
+      // Also update events if needed
+      setEvents(events.map(e => 
+        e.id === eventId 
+          ? { ...e, actual_hours: actualHours } 
+          : e
+      ));
+      
+      // Calculate new summary
+      const newSummary = calculateSummary(updatedCalculations);
+      setSummaryData(newSummary);
+      
+      toast.success("Ore effettive aggiornate con successo");
+      return true;
+    } catch (error) {
+      console.error("Errore nell'aggiornamento delle ore effettive:", error);
+      toast.error("Errore nell'aggiornamento delle ore effettive");
+      return false;
+    }
+  };
+
   return {
     events,
     calculations,
     summaryData,
     loading,
-    updateAttendance
+    updateAttendance,
+    updateActualHours
   };
 };

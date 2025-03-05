@@ -9,13 +9,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PayrollCalculation, PayrollSummary, Event } from "./types";
+import { PayrollCalculation, PayrollSummary } from "./types";
 
 interface PayrollTableProps {
   calculations: PayrollCalculation[];
   summaryData: PayrollSummary;
   loading: boolean;
-  onAttendanceClick: (event: Event) => void;
+  onAttendanceClick: (event: PayrollCalculation) => void;
+  onClientClick: (event: PayrollCalculation) => void;
   attendanceOptions: { value: string; label: string; color: string }[];
 }
 
@@ -24,6 +25,7 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
   summaryData, 
   loading,
   onAttendanceClick,
+  onClientClick,
   attendanceOptions
 }) => {
   const formatCurrency = (value: number) => `€ ${value.toFixed(2)}`;
@@ -48,8 +50,8 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
             <TableHead>Evento</TableHead>
             <TableHead>Cliente</TableHead>
             <TableHead>Data</TableHead>
-            <TableHead className="text-right">Ore Lorde</TableHead>
-            <TableHead className="text-right">Ore Nette</TableHead>
+            <TableHead className="text-right">Ore Stimate</TableHead>
+            <TableHead className="text-right">Ore Effettive</TableHead>
             <TableHead className="text-right">Compenso</TableHead>
             <TableHead className="text-right">Rimborsi</TableHead>
             <TableHead className="text-right">Fatturato</TableHead>
@@ -74,10 +76,18 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
               {calculations.map((calc) => (
                 <TableRow key={calc.eventId}>
                   <TableCell className="font-medium">{calc.eventTitle}</TableCell>
-                  <TableCell>{calc.client}</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="link" 
+                      onClick={() => onClientClick(calc)}
+                      className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {calc.client}
+                    </Button>
+                  </TableCell>
                   <TableCell>{calc.date}</TableCell>
-                  <TableCell className="text-right">{calc.grossHours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{calc.netHours.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{calc.estimated_hours?.toFixed(2) || calc.grossHours.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{calc.actual_hours?.toFixed(2) || "-"}</TableCell>
                   <TableCell className="text-right">{formatCurrency(calc.compensation)}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(calc.mealAllowance + calc.travelAllowance)}
@@ -90,15 +100,7 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                     <Button 
                       variant="ghost" 
                       className={`w-full ${getAttendanceStyle(calc.attendance)}`}
-                      onClick={() => onAttendanceClick({
-                        id: calc.eventId,
-                        title: calc.eventTitle,
-                        client: calc.client,
-                        start_date: calc.date,
-                        end_date: calc.date,
-                        location: "",
-                        attendance: calc.attendance as "present" | "absent" | "late" | null
-                      })}
+                      onClick={() => onAttendanceClick(calc)}
                     >
                       {getAttendanceLabel(calc.attendance)}
                     </Button>
@@ -110,7 +112,7 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
               <TableRow className="font-medium bg-muted/50">
                 <TableCell colSpan={3}>TOTALE</TableCell>
                 <TableCell className="text-right">{summaryData.totalGrossHours.toFixed(2)}</TableCell>
-                <TableCell className="text-right">{summaryData.totalNetHours.toFixed(2)}</TableCell>
+                <TableCell className="text-right"></TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalCompensation)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalAllowances)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalRevenue)}</TableCell>

@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { ExtendedOperator } from "@/types/operator";
-import { Event, attendanceOptions } from "./payroll/types";
+import { attendanceOptions, PayrollCalculation } from "./payroll/types";
 import { exportToCSV } from "./payroll/payrollUtils";
 import { usePayrollData } from "./payroll/usePayrollData";
 import PayrollSummary from "./payroll/PayrollSummary";
@@ -9,27 +9,35 @@ import PayrollCharts from "./payroll/PayrollCharts";
 import PayrollTable from "./payroll/PayrollTable";
 import PayrollHeader from "./payroll/PayrollHeader";
 import AttendanceDialog from "./payroll/AttendanceDialog";
+import HoursAdjustmentDialog from "./payroll/HoursAdjustmentDialog";
 import { toast } from "sonner";
 
 const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isHoursDialogOpen, setIsHoursDialogOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<PayrollCalculation | null>(null);
   
   const {
     events,
     calculations,
     summaryData,
     loading,
-    updateAttendance
+    updateAttendance,
+    updateActualHours
   } = usePayrollData(operator);
   
   const handleExportCSV = () => {
     exportToCSV(calculations, summaryData, operator.name);
   };
   
-  const openAttendanceDialog = (event: Event) => {
+  const openAttendanceDialog = (event: PayrollCalculation) => {
     setSelectedEvent(event);
     setIsAttendanceDialogOpen(true);
+  };
+  
+  const openHoursDialog = (event: PayrollCalculation) => {
+    setSelectedEvent(event);
+    setIsHoursDialogOpen(true);
   };
   
   const handleAttendanceSubmit = (eventId: number, attendanceValue: string | null) => {
@@ -44,6 +52,18 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     }
   };
   
+  const handleHoursSubmit = (eventId: number, actualHours: number) => {
+    if (actualHours < 0) {
+      toast.error("Le ore devono essere maggiori di zero");
+      return;
+    }
+    
+    const success = updateActualHours(eventId, actualHours);
+    if (success) {
+      setIsHoursDialogOpen(false);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -55,7 +75,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
       {/* Summary Cards */}
       <PayrollSummary 
         summaryData={summaryData} 
-        eventCount={events.filter(e => e.attendance === "present" || e.attendance === "late").length} 
+        eventCount={calculations.filter(e => e.attendance === "present" || e.attendance === "late").length} 
       />
       
       {/* Charts */}
@@ -70,6 +90,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         summaryData={summaryData} 
         loading={loading} 
         onAttendanceClick={openAttendanceDialog}
+        onClientClick={openHoursDialog}
         attendanceOptions={attendanceOptions}
       />
       
@@ -77,8 +98,24 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
       <AttendanceDialog
         isOpen={isAttendanceDialogOpen}
         onOpenChange={setIsAttendanceDialogOpen}
-        selectedEvent={selectedEvent}
+        selectedEvent={selectedEvent ? {
+          id: selectedEvent.eventId,
+          title: selectedEvent.eventTitle,
+          client: selectedEvent.client,
+          start_date: selectedEvent.date,
+          end_date: selectedEvent.date,
+          location: "",
+          attendance: selectedEvent.attendance as "present" | "absent" | "late" | null
+        } : null}
         onSubmit={handleAttendanceSubmit}
+      />
+      
+      {/* Hours Adjustment Dialog */}
+      <HoursAdjustmentDialog
+        isOpen={isHoursDialogOpen}
+        onOpenChange={setIsHoursDialogOpen}
+        selectedEvent={selectedEvent}
+        onSubmit={handleHoursSubmit}
       />
     </div>
   );

@@ -13,6 +13,8 @@ export interface Event {
   hourly_rate_sell?: number;
   status?: "upcoming" | "in-progress" | "completed" | "cancelled";
   attendance?: "present" | "absent" | "late" | null;
+  estimated_hours?: number;
+  actual_hours?: number;
 }
 
 // Define the payroll calculation type
@@ -28,6 +30,8 @@ export interface PayrollCalculation {
   travelAllowance: number;
   totalRevenue: number;
   attendance?: "present" | "absent" | "late" | null;
+  estimated_hours?: number;
+  actual_hours?: number;
 }
 
 export interface PayrollSummary {
