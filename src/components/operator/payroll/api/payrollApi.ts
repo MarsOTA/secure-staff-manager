@@ -4,7 +4,7 @@ import { Event, PayrollCalculation } from "../types";
 import { processEvents, processPayrollCalculations } from "../utils/payrollCalculations";
 
 // Fetch events and event_operators data for an operator
-export const fetchOperatorEvents = async (operatorId: string) => {
+export const fetchOperatorEvents = async (operatorId: number) => {
   const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
     .from('event_operators')
     .select(`

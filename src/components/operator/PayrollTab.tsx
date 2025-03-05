@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { ExtendedOperator } from "@/types/operator";
 import { attendanceOptions, PayrollCalculation } from "./payroll/types";
 import { exportToCSV } from "./payroll/payrollUtils";
-import { usePayrollData } from "./payroll/usePayrollData";
+import { usePayrollData } from "./payroll/hooks/usePayrollData";
 import PayrollSummary from "./payroll/PayrollSummary";
 import PayrollCharts from "./payroll/PayrollCharts";
 import PayrollTable from "./payroll/PayrollTable";
