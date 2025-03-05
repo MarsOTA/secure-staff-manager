@@ -102,8 +102,8 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
           id: selectedEvent.eventId,
           title: selectedEvent.eventTitle,
           client: selectedEvent.client,
-          start_date: selectedEvent.date,
-          end_date: selectedEvent.date,
+          start_date: selectedEvent.start_date || selectedEvent.date,
+          end_date: selectedEvent.end_date || selectedEvent.date,
           location: "",
           attendance: selectedEvent.attendance as "present" | "absent" | "late" | null
         } : null}

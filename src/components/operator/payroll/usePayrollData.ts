@@ -98,6 +98,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
         console.log("Event operators data:", eventOperatorsData);
         
         if (!eventOperatorsData || eventOperatorsData.length === 0) {
+          console.log("No events found for operator ID:", operator.id);
           // No events found
           setEvents([]);
           setCalculations([]);
@@ -183,6 +184,8 @@ export const usePayrollData = (operator: ExtendedOperator) => {
             eventTitle: event.title,
             client: event.clients?.name || 'Cliente sconosciuto',
             date: new Date(event.start_date).toLocaleDateString('it-IT'),
+            start_date: event.start_date,
+            end_date: event.end_date,
             grossHours: totalHours,
             netHours,
             compensation,
@@ -195,6 +198,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
           };
         }).filter(Boolean) as PayrollCalculation[];
         
+        console.log("Processed payroll data:", payrollData);
         setCalculations(payrollData);
         
         // Calculate summary

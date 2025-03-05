@@ -37,6 +37,18 @@ const HoursAdjustmentDialog: React.FC<HoursAdjustmentDialogProps> = ({
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleString('it-IT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -55,8 +67,12 @@ const HoursAdjustmentDialog: React.FC<HoursAdjustmentDialogProps> = ({
                 <div id="client" className="font-medium">{selectedEvent.client}</div>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
-                <Label htmlFor="date">Data:</Label>
-                <div id="date" className="font-medium">{selectedEvent.date}</div>
+                <Label htmlFor="startDate">Inizio:</Label>
+                <div id="startDate" className="font-medium">{formatDate(selectedEvent.start_date)}</div>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                <Label htmlFor="endDate">Fine:</Label>
+                <div id="endDate" className="font-medium">{formatDate(selectedEvent.end_date)}</div>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">
                 <Label htmlFor="estimatedHours">Ore Stimate:</Label>

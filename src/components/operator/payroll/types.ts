@@ -32,6 +32,8 @@ export interface PayrollCalculation {
   attendance?: "present" | "absent" | "late" | null;
   estimated_hours?: number;
   actual_hours?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface PayrollSummary {
