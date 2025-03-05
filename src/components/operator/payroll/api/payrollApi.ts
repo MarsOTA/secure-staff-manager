@@ -40,11 +40,24 @@ export const fetchOperatorEvents = async (operatorId: number) => {
     return { events: [], calculations: [] };
   }
   
+  // Aggiorniamo automaticamente lo status degli eventi passati a "completed" se non è già impostato
+  const now = new Date();
+  const updatedEventOperatorsData = eventOperatorsData.map(item => {
+    if (item.events) {
+      const endDate = new Date(item.events.end_date);
+      if (endDate < now && item.events.status !== "completed" && item.events.status !== "cancelled") {
+        // Se l'evento è passato e non è già completato o cancellato, lo consideriamo come completato
+        item.events.status = "completed";
+      }
+    }
+    return item;
+  });
+  
   // Process events data with proper type casting for status and attendance
-  const eventsData = processEvents(eventOperatorsData);
+  const eventsData = processEvents(updatedEventOperatorsData);
   
   // Process payroll calculations
-  const calculationsData = processPayrollCalculations(eventOperatorsData);
+  const calculationsData = processPayrollCalculations(updatedEventOperatorsData);
   
   console.log("Processed payroll data:", calculationsData);
   

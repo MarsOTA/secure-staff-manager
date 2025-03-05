@@ -24,6 +24,11 @@ export const processEvents = (eventOperatorsData: any[]): Event[] => {
     const now = new Date();
     const isPast = endDate < now;
     
+    // Per eventi passati, imposta lo stato a "completed" se non è già "cancelled"
+    if (isPast && validStatus !== "cancelled") {
+      validStatus = "completed";
+    }
+    
     // Default attendance value for completed past events with proper type validation
     const attendanceValue = isPast && validStatus === "completed" ? "present" as const : null;
     
@@ -56,6 +61,9 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const now = new Date();
     const isPast = endDate < now;
     
+    // Forza lo stato dell'evento a "completed" se è passato e non è cancellato
+    const eventStatus = isPast && event.status !== "cancelled" ? "completed" : event.status;
+    
     // Use provided hours from database first
     const totalHours = item.total_hours || 0;
     const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
@@ -66,7 +74,8 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const totalRevenue = item.revenue_generated || (netHours * (hourlyRate * 1.667)); // Default margin
     
     // Default attendance for completed past events with proper type validation
-    const attendanceValue = isPast && event.status === "completed" ? "present" as const : null;
+    // Per gli eventi passati, imposta automaticamente la presenza a "present"
+    const attendanceValue = isPast && eventStatus === "completed" ? "present" as const : null;
     
     return {
       eventId: event.id,
