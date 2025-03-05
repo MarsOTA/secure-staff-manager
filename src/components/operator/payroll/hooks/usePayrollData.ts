@@ -32,6 +32,9 @@ export const usePayrollData = (operator: ExtendedOperator) => {
         // Fetch events for this operator
         const { events: eventsData, calculations: calculationsData } = await fetchOperatorEvents(operator.id);
         
+        console.log("Fetched events:", eventsData);
+        console.log("Fetched calculations:", calculationsData);
+        
         // If no events found
         if (!eventsData || eventsData.length === 0) {
           console.log("No events found for operator ID:", operator.id);
@@ -44,6 +47,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
             totalAllowances: 0,
             totalRevenue: 0
           });
+          setLoading(false);
           return;
         }
         

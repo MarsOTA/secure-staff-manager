@@ -5,6 +5,23 @@ import { processEvents, processPayrollCalculations } from "../utils/payrollCalcu
 
 // Fetch events and event_operators data for an operator
 export const fetchOperatorEvents = async (operatorId: number) => {
+  console.log("Fetching events for operator ID:", operatorId);
+  
+  // First, let's check if the operator exists in the system
+  const { data: operatorData, error: operatorError } = await supabase
+    .from('operators')
+    .select('id, name')
+    .eq('id', operatorId)
+    .single();
+    
+  if (operatorError) {
+    console.error("Error fetching operator:", operatorError);
+    throw new Error("Failed to find operator");
+  }
+  
+  console.log("Found operator:", operatorData);
+  
+  // Now let's find any events assigned to this operator through event_operators table
   const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
     .from('event_operators')
     .select(`
@@ -36,7 +53,29 @@ export const fetchOperatorEvents = async (operatorId: number) => {
   
   console.log("Event operators data:", eventOperatorsData);
   
+  // If no events found, let's also check directly in the events table
+  // to see if there are any events that should be assigned
   if (!eventOperatorsData || eventOperatorsData.length === 0) {
+    console.log("No event_operators entries found, checking events table for assignments");
+    
+    const { data: allEvents, error: eventsError } = await supabase
+      .from('events')
+      .select(`
+        id,
+        title,
+        start_date,
+        end_date,
+        location,
+        status,
+        clients(name)
+      `);
+      
+    if (eventsError) {
+      console.error("Error fetching all events:", eventsError);
+    } else {
+      console.log("All available events:", allEvents);
+    }
+    
     return { events: [], calculations: [] };
   }
   
