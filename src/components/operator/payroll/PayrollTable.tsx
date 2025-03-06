@@ -15,32 +15,16 @@ interface PayrollTableProps {
   calculations: PayrollCalculation[];
   summaryData: PayrollSummary;
   loading: boolean;
-  onAttendanceClick: (event: PayrollCalculation) => void;
   onClientClick: (event: PayrollCalculation) => void;
-  attendanceOptions: { value: string; label: string; color: string }[];
 }
 
 const PayrollTable: React.FC<PayrollTableProps> = ({ 
   calculations, 
   summaryData, 
   loading,
-  onAttendanceClick,
   onClientClick,
-  attendanceOptions
 }) => {
   const formatCurrency = (value: number) => `€ ${value.toFixed(2)}`;
-  
-  const getAttendanceStyle = (attendance: string | null | undefined) => {
-    if (!attendance) return "bg-gray-100 text-gray-700";
-    const option = attendanceOptions.find(opt => opt.value === attendance);
-    return option ? option.color : "bg-gray-100 text-gray-700";
-  };
-  
-  const getAttendanceLabel = (attendance: string | null | undefined) => {
-    if (!attendance) return "Non registrato";
-    const option = attendanceOptions.find(opt => opt.value === attendance);
-    return option ? option.label : "Non registrato";
-  };
   
   return (
     <div className="rounded-md border">
@@ -55,19 +39,18 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
             <TableHead className="text-right">Compenso</TableHead>
             <TableHead className="text-right">Rimborsi</TableHead>
             <TableHead className="text-right">Fatturato</TableHead>
-            <TableHead className="text-center">Presenza</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 Caricamento dati...
               </TableCell>
             </TableRow>
           ) : calculations.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="h-24 text-center">
+              <TableCell colSpan={8} className="h-24 text-center">
                 Nessun dato disponibile
               </TableCell>
             </TableRow>
@@ -86,8 +69,10 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                     </Button>
                   </TableCell>
                   <TableCell>{calc.date}</TableCell>
-                  <TableCell className="text-right">{calc.estimated_hours?.toFixed(2) || calc.grossHours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{calc.actual_hours?.toFixed(2) || "-"}</TableCell>
+                  <TableCell className="text-right">{calc.grossHours.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    {calc.actual_hours ? calc.actual_hours.toFixed(2) : "-"}
+                  </TableCell>
                   <TableCell className="text-right">{formatCurrency(calc.compensation)}</TableCell>
                   <TableCell className="text-right">
                     {formatCurrency(calc.mealAllowance + calc.travelAllowance)}
@@ -96,15 +81,6 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                     </div>
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(calc.totalRevenue)}</TableCell>
-                  <TableCell>
-                    <Button 
-                      variant="ghost" 
-                      className={`w-full ${getAttendanceStyle(calc.attendance)}`}
-                      onClick={() => onAttendanceClick(calc)}
-                    >
-                      {getAttendanceLabel(calc.attendance)}
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))}
               
@@ -116,7 +92,6 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                 <TableCell className="text-right">{formatCurrency(summaryData.totalCompensation)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalAllowances)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalRevenue)}</TableCell>
-                <TableCell></TableCell>
               </TableRow>
             </>
           )}

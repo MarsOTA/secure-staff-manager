@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
@@ -22,6 +21,42 @@ export const usePayrollData = (operator: ExtendedOperator) => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Update actual hours for an event
+  const updateActualHours = (eventId: number, actualHours: number) => {
+    try {
+      // Update calculations with the new actual hours
+      const updatedCalculations = calculations.map(calc => {
+        if (calc.eventId === eventId) {
+          // Calculate compensation based on actual hours
+          const hourlyRate = calc.compensation / (calc.netHours || 1);
+          const newCompensation = actualHours * hourlyRate;
+          const newRevenue = actualHours * (calc.totalRevenue / (calc.netHours || 1));
+          
+          return { 
+            ...calc, 
+            actual_hours: actualHours,
+            compensation: newCompensation,
+            totalRevenue: newRevenue
+          };
+        }
+        return calc;
+      });
+      
+      setCalculations(updatedCalculations);
+      
+      // Calculate new summary
+      const newSummary = calculateSummary(updatedCalculations);
+      setSummaryData(newSummary);
+      
+      toast.success("Ore effettive aggiornate con successo");
+      return true;
+    } catch (error) {
+      console.error("Errore nell'aggiornamento delle ore effettive:", error);
+      toast.error("Errore nell'aggiornamento delle ore effettive");
+      return false;
+    }
+  };
+
   // Load events and calculate payroll from Supabase or localStorage
   useEffect(() => {
     const loadEvents = async () => {
@@ -32,10 +67,6 @@ export const usePayrollData = (operator: ExtendedOperator) => {
         // Fetch events for this operator
         const { events: eventsData, calculations: calculationsData } = await fetchOperatorEvents(operator.id);
         
-        console.log("Fetched events:", eventsData);
-        console.log("Fetched calculations:", calculationsData);
-        
-        // If no events found
         if (!eventsData || eventsData.length === 0) {
           console.log("No events found for operator ID:", operator.id);
           setEvents([]);
@@ -50,20 +81,34 @@ export const usePayrollData = (operator: ExtendedOperator) => {
           setLoading(false);
           return;
         }
+
+        // Filter completed events and calculate actual hours
+        const processedCalculations = calculationsData.map(calc => {
+          if (calc.actual_hours === undefined) {
+            // For completed events without actual hours set, use estimated hours minus break
+            const grossHours = calc.grossHours;
+            const netHours = grossHours > 5 ? grossHours - 1 : grossHours;
+            return {
+              ...calc,
+              netHours,
+              compensation: netHours * (calc.compensation / (calc.netHours || 1))
+            };
+          }
+          return calc;
+        });
         
         // Set events and calculations
         setEvents(eventsData);
-        setCalculations(calculationsData);
+        setCalculations(processedCalculations);
         
         // Calculate summary
-        const summary = calculateSummary(calculationsData);
+        const summary = calculateSummary(processedCalculations);
         setSummaryData(summary);
         
       } catch (error) {
         console.error("Errore nel caricamento degli eventi:", error);
         toast.error("Errore nel caricamento degli eventi");
         
-        // Set empty data
         setEvents([]);
         setCalculations([]);
         setSummaryData({
@@ -81,95 +126,11 @@ export const usePayrollData = (operator: ExtendedOperator) => {
     loadEvents();
   }, [operator.id]);
 
-  // Update attendance for an event
-  const updateAttendance = (eventId: number, attendanceValue: string | null) => {
-    if (!attendanceValue) return false;
-    
-    try {
-      // Validate the selected attendance
-      const validAttendance = validateAttendance(attendanceValue);
-      
-      // Update local state
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, attendance: validAttendance } 
-          : e
-      ));
-      
-      setCalculations(calculations.map(calc => 
-        calc.eventId === eventId 
-          ? { ...calc, attendance: validAttendance } 
-          : calc
-      ));
-      
-      // Calculate new summary
-      const newCalculations = calculations.map(calc => 
-        calc.eventId === eventId 
-          ? { ...calc, attendance: validAttendance } 
-          : calc
-      );
-      
-      const newSummary = calculateSummary(newCalculations);
-      setSummaryData(newSummary);
-      
-      toast.success("Presenza aggiornata con successo");
-      return true;
-    } catch (error) {
-      console.error("Errore nell'aggiornamento della presenza:", error);
-      toast.error("Errore nell'aggiornamento della presenza");
-      return false;
-    }
-  };
-
-  // Update actual hours for an event
-  const updateActualHours = (eventId: number, actualHours: number) => {
-    try {
-      // Update calculations with the new actual hours
-      const updatedCalculations = calculations.map(calc => {
-        if (calc.eventId === eventId) {
-          // Update compensation and revenue based on actual hours
-          const hourlyRate = calc.compensation / (calc.netHours || 1);
-          const newCompensation = actualHours * hourlyRate;
-          const newRevenue = actualHours * (calc.totalRevenue / (calc.netHours || 1));
-          
-          return { 
-            ...calc, 
-            actual_hours: actualHours,
-            compensation: newCompensation,
-            totalRevenue: newRevenue
-          };
-        }
-        return calc;
-      });
-      
-      setCalculations(updatedCalculations);
-      
-      // Also update events if needed
-      setEvents(events.map(e => 
-        e.id === eventId 
-          ? { ...e, actual_hours: actualHours } 
-          : e
-      ));
-      
-      // Calculate new summary
-      const newSummary = calculateSummary(updatedCalculations);
-      setSummaryData(newSummary);
-      
-      toast.success("Ore effettive aggiornate con successo");
-      return true;
-    } catch (error) {
-      console.error("Errore nell'aggiornamento delle ore effettive:", error);
-      toast.error("Errore nell'aggiornamento delle ore effettive");
-      return false;
-    }
-  };
-
   return {
     events,
     calculations,
     summaryData,
     loading,
-    updateAttendance,
     updateActualHours
   };
 };
