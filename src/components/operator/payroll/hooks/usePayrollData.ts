@@ -22,7 +22,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Load events and calculate payroll from Supabase
+  // Load events and calculate payroll from Supabase or localStorage
   useEffect(() => {
     const loadEvents = async () => {
       try {
@@ -62,6 +62,17 @@ export const usePayrollData = (operator: ExtendedOperator) => {
       } catch (error) {
         console.error("Errore nel caricamento degli eventi:", error);
         toast.error("Errore nel caricamento degli eventi");
+        
+        // Set empty data
+        setEvents([]);
+        setCalculations([]);
+        setSummaryData({
+          totalGrossHours: 0,
+          totalNetHours: 0,
+          totalCompensation: 0,
+          totalAllowances: 0,
+          totalRevenue: 0
+        });
       } finally {
         setLoading(false);
       }
