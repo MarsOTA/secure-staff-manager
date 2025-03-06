@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Edit, Trash2, X } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Edit, Trash2, CheckCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -23,6 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Definizione dell'interfaccia Event per l'applicazione
 export interface Event {
@@ -40,6 +40,7 @@ export interface Event {
   netHours?: number; // Ore nette previste
   hourlyRateCost?: number; // €/h operatore (costo)
   hourlyRateSell?: number; // €/h operatore (prezzo di vendita)
+  status?: string; // Status dell'evento: upcoming, completed, cancelled
 }
 
 // Chiave per il localStorage
@@ -54,6 +55,7 @@ const Events = () => {
   // Stato per il dialog dei dettagli
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isClosingEvent, setIsClosingEvent] = useState(false);
   
   // Carica gli eventi dal localStorage all'avvio
   useEffect(() => {
@@ -174,6 +176,101 @@ const Events = () => {
     setIsDetailsOpen(true);
   };
 
+  // Funzione per chiudere un evento e aggiornare il payroll
+  const handleCloseEvent = async (eventId: number) => {
+    setIsClosingEvent(true);
+    
+    try {
+      // 1. Aggiorniamo lo stato dell'evento a "completed" in localStorage
+      const updatedEvents = events.map(event => {
+        if (event.id === eventId) {
+          return { ...event, status: 'completed' };
+        }
+        return event;
+      });
+      
+      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
+      setEvents(updatedEvents);
+      
+      // 2. Aggiorniamo anche lo stato dell'evento nel database Supabase se esiste
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({ status: 'completed' })
+        .eq('id', eventId);
+        
+      if (updateError) {
+        console.error("Errore durante l'aggiornamento dell'evento nel database:", updateError);
+        // Non blocchiamo il processo se fallisce l'aggiornamento nel database
+      }
+      
+      // 3. Troviamo l'evento nel localStorage per ottenere le informazioni necessarie
+      const eventToClose = updatedEvents.find(e => e.id === eventId);
+      
+      if (eventToClose) {
+        // 4. Otteniamo gli operatori assegnati all'evento da Supabase
+        const { data: eventOperators, error: eventOperatorsError } = await supabase
+          .from('event_operators')
+          .select('*')
+          .eq('event_id', eventId);
+          
+        if (eventOperatorsError) {
+          console.error("Errore durante il recupero degli operatori per l'evento:", eventOperatorsError);
+          toast.error("Impossibile recuperare gli operatori assegnati all'evento");
+          setIsClosingEvent(false);
+          return;
+        }
+        
+        // 5. Se non ci sono operatori assegnati, possiamo terminare qui
+        if (!eventOperators || eventOperators.length === 0) {
+          toast.success("Evento chiuso con successo! Nessun operatore assegnato da aggiornare.");
+          setIsClosingEvent(false);
+          return;
+        }
+        
+        console.log("Operatori trovati per l'evento:", eventOperators);
+        
+        // 6. Per ogni operatore, aggiorniamo i dati nel database
+        for (const operator of eventOperators) {
+          // Usando i dati dell'evento ed eventuali override dal database
+          const netHours = eventToClose.netHours || operator.net_hours || 0;
+          const hourlyRate = eventToClose.hourlyRateCost || operator.hourly_rate || 0;
+          const totalCompensation = netHours * hourlyRate;
+          
+          // Aggiorniamo i dati dell'operatore per l'evento
+          const { error: updateOperatorError } = await supabase
+            .from('event_operators')
+            .update({
+              net_hours: netHours,
+              total_hours: eventToClose.grossHours || operator.total_hours || 0,
+              hourly_rate: hourlyRate,
+              total_compensation: totalCompensation,
+              // Nel caso ci siano indennità specifiche già impostate, le manteniamo
+              meal_allowance: operator.meal_allowance || 0,
+              travel_allowance: operator.travel_allowance || 0,
+              // Se vendiamo a un prezzo diverso, possiamo calcolare anche il revenue_generated
+              revenue_generated: (eventToClose.hourlyRateSell || 0) * netHours
+            })
+            .eq('id', operator.id);
+            
+          if (updateOperatorError) {
+            console.error(`Errore durante l'aggiornamento dell'operatore ${operator.id}:`, updateOperatorError);
+          }
+        }
+        
+        toast.success("Evento chiuso e paghe aggiornate con successo!");
+        
+        // Chiudiamo il dialog dopo l'operazione
+        setIsDetailsOpen(false);
+        setSelectedEvent(null);
+      }
+    } catch (error) {
+      console.error("Errore durante la chiusura dell'evento:", error);
+      toast.error("Si è verificato un errore durante la chiusura dell'evento");
+    } finally {
+      setIsClosingEvent(false);
+    }
+  };
+
   return (
     <Layout>
       <Card>
@@ -290,6 +387,13 @@ const Events = () => {
               </div>
               
               <div>
+                <h4 className="text-sm font-medium text-muted-foreground">Stato</h4>
+                <p className="text-base capitalize">
+                  {selectedEvent.status || "upcoming"}
+                </p>
+              </div>
+              
+              <div>
                 <h4 className="text-sm font-medium text-muted-foreground">Personale Richiesto</h4>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {selectedEvent.personnelTypes.map((type) => (
@@ -302,22 +406,71 @@ const Events = () => {
                   ))}
                 </div>
               </div>
+              
+              {(selectedEvent.grossHours || selectedEvent.netHours) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedEvent.grossHours && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Ore lorde</h4>
+                      <p className="text-base">{selectedEvent.grossHours}</p>
+                    </div>
+                  )}
+                  {selectedEvent.netHours && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Ore nette</h4>
+                      <p className="text-base">{selectedEvent.netHours}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {(selectedEvent.hourlyRateCost || selectedEvent.hourlyRateSell) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedEvent.hourlyRateCost && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Tariffa oraria (costo)</h4>
+                      <p className="text-base">€{selectedEvent.hourlyRateCost}</p>
+                    </div>
+                  )}
+                  {selectedEvent.hourlyRateSell && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Tariffa oraria (vendita)</h4>
+                      <p className="text-base">€{selectedEvent.hourlyRateSell}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-              Chiudi
-            </Button>
-            {selectedEvent && (
-              <Button onClick={() => {
-                setIsDetailsOpen(false);
-                navigate(`/events/create?id=${selectedEvent.id}`);
-              }}>
-                <Edit className="mr-2 h-4 w-4" />
-                Modifica
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <div>
+              <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
+                Chiudi
               </Button>
-            )}
+            </div>
+            <div className="flex gap-2">
+              {selectedEvent && selectedEvent.status !== 'completed' && (
+                <Button 
+                  variant="outline" 
+                  className="bg-green-50 border-green-200 text-green-600 hover:bg-green-100 hover:text-green-700"
+                  onClick={() => handleCloseEvent(selectedEvent.id)}
+                  disabled={isClosingEvent}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  {isClosingEvent ? "Chiusura in corso..." : "Chiudi Evento"}
+                </Button>
+              )}
+              {selectedEvent && (
+                <Button onClick={() => {
+                  setIsDetailsOpen(false);
+                  navigate(`/events/create?id=${selectedEvent.id}`);
+                }}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Modifica
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
