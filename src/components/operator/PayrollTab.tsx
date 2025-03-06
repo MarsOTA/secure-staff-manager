@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { ExtendedOperator } from "@/types/operator";
 import { attendanceOptions, PayrollCalculation } from "./payroll/types";
@@ -7,7 +8,6 @@ import PayrollSummary from "./payroll/PayrollSummary";
 import PayrollCharts from "./payroll/PayrollCharts";
 import PayrollTable from "./payroll/PayrollTable";
 import PayrollHeader from "./payroll/PayrollHeader";
-import AttendanceDialog from "./payroll/AttendanceDialog";
 import HoursAdjustmentDialog from "./payroll/HoursAdjustmentDialog";
 import { toast } from "sonner";
 

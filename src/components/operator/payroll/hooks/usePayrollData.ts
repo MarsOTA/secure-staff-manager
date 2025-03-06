@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
@@ -82,7 +83,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
           return;
         }
 
-        // Filter completed events and calculate actual hours
+        // Process completed events and calculate actual hours
         const processedCalculations = calculationsData.map(calc => {
           if (calc.actual_hours === undefined) {
             // For completed events without actual hours set, use estimated hours minus break
@@ -91,7 +92,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
             return {
               ...calc,
               netHours,
-              compensation: netHours * (calc.compensation / (calc.netHours || 1))
+              actual_hours: netHours // Set actual_hours equal to netHours (estimated - break)
             };
           }
           return calc;

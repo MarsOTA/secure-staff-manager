@@ -71,7 +71,7 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                   <TableCell>{calc.date}</TableCell>
                   <TableCell className="text-right">{calc.grossHours.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
-                    {calc.actual_hours ? calc.actual_hours.toFixed(2) : "-"}
+                    {calc.actual_hours !== undefined ? calc.actual_hours.toFixed(2) : "-"}
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(calc.compensation)}</TableCell>
                   <TableCell className="text-right">

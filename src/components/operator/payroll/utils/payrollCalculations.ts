@@ -73,9 +73,8 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const travelAllowance = item.travel_allowance || 15;
     const totalRevenue = item.revenue_generated || (netHours * (hourlyRate * 1.667)); // Default margin
     
-    // Default attendance for completed past events with proper type validation
-    // Per gli eventi passati, imposta automaticamente la presenza a "present"
-    const attendanceValue = isPast && eventStatus === "completed" ? "present" as const : null;
+    // For completed events, set actual hours to net hours by default if not provided
+    const actualHours = eventStatus === "completed" ? (item.actual_hours || netHours) : undefined;
     
     return {
       eventId: event.id,
@@ -90,9 +89,9 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
       mealAllowance,
       travelAllowance,
       totalRevenue,
-      attendance: attendanceValue,
+      attendance: isPast && eventStatus === "completed" ? "present" as const : null,
       estimated_hours: totalHours,
-      actual_hours: undefined // Will be set by user
+      actual_hours: actualHours  // Set actual_hours for completed events
     };
   }).filter(Boolean) as PayrollCalculation[];
 };
@@ -107,22 +106,22 @@ export const validateAttendance = (value: any): "present" | "absent" | "late" | 
 
 // Calculate summary totals based on calculations
 export const calculateSummary = (calculationsData: PayrollCalculation[]): PayrollSummary => {
-  return calculationsData
-    .filter(calc => calc.attendance === "present" || calc.attendance === "late")
-    .reduce((acc, curr) => {
-      const hoursToUse = curr.actual_hours || curr.netHours;
-      return {
-        totalGrossHours: acc.totalGrossHours + (curr.actual_hours || curr.grossHours),
-        totalNetHours: acc.totalNetHours + hoursToUse,
-        totalCompensation: acc.totalCompensation + curr.compensation,
-        totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
-        totalRevenue: acc.totalRevenue + curr.totalRevenue
-      };
-    }, {
-      totalGrossHours: 0,
-      totalNetHours: 0,
-      totalCompensation: 0,
-      totalAllowances: 0,
-      totalRevenue: 0
-    });
+  return calculationsData.reduce((acc, curr) => {
+    // Use actual_hours if available, otherwise use netHours
+    const hoursToUse = curr.actual_hours !== undefined ? curr.actual_hours : curr.netHours;
+    
+    return {
+      totalGrossHours: acc.totalGrossHours + curr.grossHours,
+      totalNetHours: acc.totalNetHours + hoursToUse,
+      totalCompensation: acc.totalCompensation + curr.compensation,
+      totalAllowances: acc.totalAllowances + (curr.mealAllowance + curr.travelAllowance),
+      totalRevenue: acc.totalRevenue + curr.totalRevenue
+    };
+  }, {
+    totalGrossHours: 0,
+    totalNetHours: 0,
+    totalCompensation: 0,
+    totalAllowances: 0,
+    totalRevenue: 0
+  });
 };
