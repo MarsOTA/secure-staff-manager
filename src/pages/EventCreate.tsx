@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
-import { Event } from "./Events";
+import { Event } from "@/types/events";
 import { Client } from "./Clients";
 import EventForm from "@/components/events/create/EventForm";
 

@@ -9,7 +9,7 @@ import PersonnelSection from "./PersonnelSection";
 import DateTimeSection from "./DateTimeSection";
 import LocationSection from "./LocationSection";
 import HoursAndCostsSection from "./HoursAndCostsSection";
-import { Event } from "@/pages/Events";
+import { Event } from "@/types/events";
 import { Client } from "@/pages/Clients";
 import { toast } from "sonner";
 import { combineDateTime } from "./eventCreateUtils";

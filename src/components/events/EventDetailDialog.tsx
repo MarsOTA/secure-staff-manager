@@ -2,7 +2,7 @@
 import React from 'react';
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Event } from "@/pages/Events";
+import { Event } from "@/types/events";
 import { Button } from "@/components/ui/button";
 import { Edit, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";

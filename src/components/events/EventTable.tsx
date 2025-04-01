@@ -2,7 +2,7 @@
 import React from 'react';
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Event } from "@/pages/Events";
+import { Event } from "@/types/events";
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import {
@@ -60,7 +60,7 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
     if (typeof event.personnelCount === 'number') {
       return event.personnelCount;
     } else if (event.personnelCount && typeof event.personnelCount === 'object') {
-      return Object.values(event.personnelCount).reduce((sum, count) => sum + count, 0);
+      return Object.values(event.personnelCount).reduce((sum, count) => sum + Number(count), 0);
     } else {
       // If personnelCount is not defined, default to the number of types
       return event.personnelTypes.length;
