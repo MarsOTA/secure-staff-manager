@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface EventTableProps {
   events: Event[];
@@ -54,6 +55,36 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
     }
   };
 
+  // Function to calculate total required personnel
+  const calculateTotalPersonnel = (event: Event): number => {
+    if (typeof event.personnelCount === 'number') {
+      return event.personnelCount;
+    } else if (event.personnelCount && typeof event.personnelCount === 'object') {
+      return Object.values(event.personnelCount).reduce((sum, count) => sum + count, 0);
+    } else {
+      // If personnelCount is not defined, default to the number of types
+      return event.personnelTypes.length;
+    }
+  };
+
+  // Function to get assigned personnel count (mocked for now)
+  const getAssignedPersonnelCount = (event: Event): number => {
+    // This would normally come from your database or state
+    // For now, we'll simulate it
+    return event.assignedPersonnel || 0;
+  };
+
+  // Function to get staff ratio color
+  const getStaffRatioColor = (assigned: number, total: number): string => {
+    if (assigned < total) {
+      return 'text-orange-500 font-medium';
+    } else if (assigned === total) {
+      return 'text-green-600 font-medium';
+    } else {
+      return 'text-gray-900 font-medium';
+    }
+  };
+
   return (
     <Table>
       <TableHeader>
@@ -63,6 +94,7 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
           <TableHead>Data e Ora</TableHead>
           <TableHead>Stato</TableHead>
           <TableHead>Personale Richiesto</TableHead>
+          <TableHead>Staff Richiesto</TableHead>
           <TableHead className="text-right">Azioni</TableHead>
         </TableRow>
       </TableHeader>
@@ -96,6 +128,19 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
                   </span>
                 ))}
               </div>
+            </TableCell>
+            <TableCell>
+              {(() => {
+                const assigned = getAssignedPersonnelCount(event);
+                const total = calculateTotalPersonnel(event);
+                const ratioClass = getStaffRatioColor(assigned, total);
+                
+                return (
+                  <span className={ratioClass}>
+                    {assigned}/{total}
+                  </span>
+                );
+              })()}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">

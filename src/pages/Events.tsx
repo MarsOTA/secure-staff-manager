@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
@@ -27,6 +28,7 @@ export interface Event {
   hourlyRateCost?: number;
   hourlyRateSell?: number;
   status?: string;
+  assignedPersonnel?: number; // Added this property
 }
 
 const EVENTS_STORAGE_KEY = "app_events_data";
@@ -48,7 +50,12 @@ const Events = () => {
         const eventsWithDates = parsedEvents.map((event: any) => ({
           ...event,
           startDate: new Date(event.startDate),
-          endDate: new Date(event.endDate)
+          endDate: new Date(event.endDate),
+          // Add random assignedPersonnel for demo purposes
+          assignedPersonnel: event.assignedPersonnel || Math.floor(Math.random() * 
+            (typeof event.personnelCount === 'number' ? event.personnelCount : 
+             (event.personnelCount ? Object.values(event.personnelCount).reduce((sum: number, count: number) => sum + count, 0) : 
+              event.personnelTypes.length)))
         }));
         setEvents(eventsWithDates);
       } catch (error) {
@@ -61,6 +68,7 @@ const Events = () => {
             startDate: new Date(2023, 6, 15, 18, 0),
             endDate: new Date(2023, 6, 15, 23, 30),
             personnelTypes: ["security", "doorman", "hostess/steward"],
+            assignedPersonnel: 2
           },
           {
             id: 2,
@@ -69,6 +77,7 @@ const Events = () => {
             startDate: new Date(2023, 7, 10, 9, 0),
             endDate: new Date(2023, 7, 12, 19, 0),
             personnelTypes: ["security", "hostess/steward"],
+            assignedPersonnel: 2
           },
         ]);
       }
@@ -81,6 +90,7 @@ const Events = () => {
           startDate: new Date(2023, 6, 15, 18, 0),
           endDate: new Date(2023, 6, 15, 23, 30),
           personnelTypes: ["security", "doorman", "hostess/steward"],
+          assignedPersonnel: 2
         },
         {
           id: 2,
@@ -89,6 +99,7 @@ const Events = () => {
           startDate: new Date(2023, 7, 10, 9, 0),
           endDate: new Date(2023, 7, 12, 19, 0),
           personnelTypes: ["security", "hostess/steward"],
+          assignedPersonnel: 2
         },
       ]);
     }
