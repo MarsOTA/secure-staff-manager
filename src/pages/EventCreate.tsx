@@ -74,6 +74,7 @@ const EventCreate = () => {
   const [title, setTitle] = useState("");
   const [client, setClient] = useState("");
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
+  const [personnelCounts, setPersonnelCounts] = useState<Record<string, number>>({});
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("09:00");
@@ -160,6 +161,17 @@ const EventCreate = () => {
             }
             
             setSelectedPersonnel(eventToEdit.personnelTypes);
+            
+            if (eventToEdit.personnelCount && typeof eventToEdit.personnelCount === 'object') {
+              setPersonnelCounts(eventToEdit.personnelCount);
+            } else {
+              const counts: Record<string, number> = {};
+              eventToEdit.personnelTypes.forEach(type => {
+                counts[type] = 1;
+              });
+              setPersonnelCounts(counts);
+            }
+            
             setStartDate(eventToEdit.startDate);
             setEndDate(eventToEdit.endDate);
             setStartTime(format(eventToEdit.startDate, "HH:mm"));
@@ -208,11 +220,27 @@ const EventCreate = () => {
   const handlePersonnelChange = (personnelId: string) => {
     setSelectedPersonnel((current) => {
       if (current.includes(personnelId)) {
+        setPersonnelCounts(prev => {
+          const newCounts = { ...prev };
+          delete newCounts[personnelId];
+          return newCounts;
+        });
         return current.filter((id) => id !== personnelId);
       } else {
+        setPersonnelCounts(prev => ({
+          ...prev,
+          [personnelId]: 1
+        }));
         return [...current, personnelId];
       }
     });
+  };
+  
+  const handlePersonnelCountChange = (personnelId: string, count: number) => {
+    setPersonnelCounts(prev => ({
+      ...prev,
+      [personnelId]: Math.max(1, count)
+    }));
   };
   
   const handleLocationChange = (value: string) => {
@@ -323,7 +351,8 @@ const EventCreate = () => {
         breakEndTime: breakEndTime || undefined,
         netHours: netHours ? Number(netHours) : undefined,
         hourlyRateCost: hourlyRateCost ? Number(hourlyRateCost) : undefined,
-        hourlyRateSell: hourlyRateSell ? Number(hourlyRateSell) : undefined
+        hourlyRateSell: hourlyRateSell ? Number(hourlyRateSell) : undefined,
+        personnelCount: personnelCounts
       };
       
       if (isEditMode) {
@@ -535,17 +564,35 @@ const EventCreate = () => {
             
             <div className="space-y-2">
               <Label>Tipologia di personale richiesto *</Label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {personnelTypes.map((type) => (
-                  <div key={type.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`personnel-${type.id}`} 
-                      checked={selectedPersonnel.includes(type.id)}
-                      onCheckedChange={() => handlePersonnelChange(type.id)}
-                    />
-                    <Label htmlFor={`personnel-${type.id}`} className="cursor-pointer">
-                      {type.label}
-                    </Label>
+                  <div key={type.id} className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`personnel-${type.id}`} 
+                        checked={selectedPersonnel.includes(type.id)}
+                        onCheckedChange={() => handlePersonnelChange(type.id)}
+                      />
+                      <Label htmlFor={`personnel-${type.id}`} className="cursor-pointer">
+                        {type.label}
+                      </Label>
+                    </div>
+                    
+                    {selectedPersonnel.includes(type.id) && (
+                      <div className="flex items-center space-x-2">
+                        <Label htmlFor={`count-${type.id}`} className="text-sm whitespace-nowrap">
+                          Numero:
+                        </Label>
+                        <Input
+                          id={`count-${type.id}`}
+                          type="number"
+                          min="1"
+                          value={personnelCounts[type.id] || 1}
+                          onChange={(e) => handlePersonnelCountChange(type.id, parseInt(e.target.value) || 1)}
+                          className="w-20"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

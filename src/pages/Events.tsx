@@ -17,6 +17,7 @@ export interface Event {
   startDate: Date;
   endDate: Date;
   personnelTypes: string[];
+  personnelCount?: Record<string, number> | number;
   location?: string;
   address?: string;
   grossHours?: number;

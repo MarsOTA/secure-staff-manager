@@ -51,6 +51,21 @@ const EventDetailDialog = ({
     }
   };
 
+  // Get personnel count by type
+  const getPersonnelCountByType = (type: string) => {
+    if (!event || !event.personnelCount || !event.personnelTypes) {
+      return 0;
+    }
+    
+    // If personnelCount is an object that maps types to counts
+    if (typeof event.personnelCount === 'object') {
+      return event.personnelCount[type] || 0;
+    }
+    
+    // If there's just a total count for all types, divide it equally
+    return Math.floor(event.personnelCount / event.personnelTypes.length);
+  };
+
   if (!event) return null;
 
   return (
@@ -91,14 +106,19 @@ const EventDetailDialog = ({
           
           <div>
             <h4 className="text-sm font-medium text-muted-foreground">Personale Richiesto</h4>
-            <div className="flex flex-wrap gap-1 mt-1">
+            <div className="flex flex-wrap gap-2 mt-1">
               {event.personnelTypes.map((type) => (
-                <span 
+                <div 
                   key={type}
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800"
+                  className="inline-flex items-center gap-1.5"
                 >
-                  {type}
-                </span>
+                  <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                    {type}
+                  </span>
+                  <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
+                    {getPersonnelCountByType(type)} {getPersonnelCountByType(type) === 1 ? 'persona' : 'persone'}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
