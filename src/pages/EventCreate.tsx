@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
-import { Event } from "@/types/events";
+import { Event, WorkShift } from "@/types/events";
 import { Client } from "./Clients";
 import EventForm from "@/components/events/create/EventForm";
 import { calculateGrossHours, calculateBreakDuration, calculateNetHours, countEventDays } from "@/components/events/create/eventCreateUtils";
@@ -71,6 +72,7 @@ const EventCreate = () => {
   const [netHours, setNetHours] = useState("");
   const [hourlyRateCost, setHourlyRateCost] = useState("");
   const [hourlyRateSell, setHourlyRateSell] = useState("");
+  const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
   
   const [clients, setClients] = useState<Client[]>([]);
   
@@ -189,6 +191,10 @@ const EventCreate = () => {
             if (eventToEdit.hourlyRateSell) {
               setHourlyRateSell(eventToEdit.hourlyRateSell.toString());
             }
+            
+            if (eventToEdit.workShifts && Array.isArray(eventToEdit.workShifts)) {
+              setWorkShifts(eventToEdit.workShifts);
+            }
           }
         }
       } catch (error) {
@@ -294,7 +300,8 @@ const EventCreate = () => {
     breakEndTime,
     netHours,
     hourlyRateCost,
-    hourlyRateSell
+    hourlyRateSell,
+    workShifts
   };
   
   const setters = {
@@ -313,7 +320,8 @@ const EventCreate = () => {
     setBreakEndTime,
     setNetHours,
     setHourlyRateCost,
-    setHourlyRateSell
+    setHourlyRateSell,
+    setWorkShifts
   };
   
   const locationHelpers = {

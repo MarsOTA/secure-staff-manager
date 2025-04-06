@@ -1,4 +1,10 @@
 
+export interface WorkShift {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
 export interface Event {
   id: number;
   title: string;
@@ -17,4 +23,5 @@ export interface Event {
   hourlyRateSell?: number;
   status?: string;
   assignedPersonnel?: number;
+  workShifts?: WorkShift[];
 }

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -9,10 +9,11 @@ import PersonnelSection from "./PersonnelSection";
 import DateTimeSection from "./DateTimeSection";
 import LocationSection from "./LocationSection";
 import HoursAndCostsSection from "./HoursAndCostsSection";
-import { Event } from "@/types/events";
+import WorkShiftsSection from "./WorkShiftsSection";
+import { Event, WorkShift } from "@/types/events";
 import { Client } from "@/pages/Clients";
 import { toast } from "sonner";
-import { combineDateTime } from "./eventCreateUtils";
+import { combineDateTime, countEventDays } from "./eventCreateUtils";
 
 const EVENTS_STORAGE_KEY = "app_events_data";
 
@@ -35,6 +36,7 @@ interface EventFormProps {
     netHours: string;
     hourlyRateCost: string;
     hourlyRateSell: string;
+    workShifts: WorkShift[];
   };
   setters: {
     setTitle: React.Dispatch<React.SetStateAction<string>>;
@@ -53,6 +55,7 @@ interface EventFormProps {
     setNetHours: React.Dispatch<React.SetStateAction<string>>;
     setHourlyRateCost: React.Dispatch<React.SetStateAction<string>>;
     setHourlyRateSell: React.Dispatch<React.SetStateAction<string>>;
+    setWorkShifts: React.Dispatch<React.SetStateAction<WorkShift[]>>;
   };
   clients: Client[];
   locationHelpers: {
@@ -82,8 +85,16 @@ const EventForm: React.FC<EventFormProps> = ({
     startDate, endDate, startTime, endTime,
     eventLocation, eventAddress,
     grossHours, breakStartTime, breakEndTime, netHours,
-    hourlyRateCost, hourlyRateSell
+    hourlyRateCost, hourlyRateSell, workShifts
   } = eventData;
+  
+  // Calculate if this is a multi-day event
+  const isMultiDayEvent = useMemo(() => {
+    if (startDate && endDate) {
+      return countEventDays(startDate, endDate) > 1;
+    }
+    return false;
+  }, [startDate, endDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +129,8 @@ const EventForm: React.FC<EventFormProps> = ({
         netHours: netHours ? Number(netHours) : undefined,
         hourlyRateCost: hourlyRateCost ? Number(hourlyRateCost) : undefined,
         hourlyRateSell: hourlyRateSell ? Number(hourlyRateSell) : undefined,
-        personnelCount: personnelCounts
+        personnelCount: personnelCounts,
+        workShifts: workShifts.length > 0 ? workShifts : undefined
       };
       
       if (isEditMode) {
@@ -226,6 +238,14 @@ const EventForm: React.FC<EventFormProps> = ({
               setEndDate={setters.setEndDate}
               setStartTime={setters.setStartTime}
               setEndTime={setters.setEndTime}
+            />
+            
+            <WorkShiftsSection
+              startDate={startDate}
+              endDate={endDate}
+              workShifts={workShifts}
+              setWorkShifts={setters.setWorkShifts}
+              showWorkShifts={isMultiDayEvent}
             />
             
             <HoursAndCostsSection
