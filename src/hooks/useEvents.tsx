@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Event } from "@/types/events";
 import { toast } from "sonner";
@@ -22,11 +21,8 @@ export function useEvents() {
             ...event,
             startDate: new Date(event.startDate),
             endDate: new Date(event.endDate),
-            // Add random assignedPersonnel for demo purposes
-            assignedPersonnel: event.assignedPersonnel || Math.floor(Math.random() * 
-              (typeof event.personnelCount === 'number' ? event.personnelCount : 
-               (event.personnelCount ? Object.values(event.personnelCount).reduce((sum: number, count: number) => sum + count, 0) : 
-                event.personnelTypes.length)))
+            // Mantieni il valore di assignedPersonnel se esiste già
+            assignedPersonnel: event.assignedPersonnel || 0
           }));
           setEvents(eventsWithDates);
         } catch (error) {
@@ -49,7 +45,7 @@ export function useEvents() {
           startDate: new Date(2023, 6, 15, 18, 0),
           endDate: new Date(2023, 6, 15, 23, 30),
           personnelTypes: ["security", "doorman", "hostess/steward"],
-          assignedPersonnel: 2
+          assignedPersonnel: 0
         },
         {
           id: 2,
@@ -58,7 +54,7 @@ export function useEvents() {
           startDate: new Date(2023, 7, 10, 9, 0),
           endDate: new Date(2023, 7, 12, 19, 0),
           personnelTypes: ["security", "hostess/steward"],
-          assignedPersonnel: 2
+          assignedPersonnel: 0
         },
       ]);
     };

@@ -201,8 +201,8 @@ const Operators = () => {
     
     const eventId = parseInt(selectedEventId);
     
-    setOperators((prev) =>
-      prev.map((op) => {
+    setOperators((prev) => {
+      const updatedOperators = prev.map((op) => {
         if (op.id === assigningOperator.id) {
           const currentAssignedEvents = op.assignedEvents || [];
           if (currentAssignedEvents.includes(eventId)) {
@@ -216,8 +216,30 @@ const Operators = () => {
           };
         }
         return op;
-      })
-    );
+      });
+      
+      localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(updatedOperators));
+      return updatedOperators;
+    });
+    
+    // Aggiorna il conteggio degli operatori assegnati nell'evento
+    setEvents((prevEvents) => {
+      const updatedEvents = prevEvents.map((event) => {
+        if (event.id === eventId) {
+          // Incrementa il conteggio degli operatori assegnati
+          const currentAssigned = event.assignedPersonnel || 0;
+          return {
+            ...event,
+            assignedPersonnel: currentAssigned + 1
+          };
+        }
+        return event;
+      });
+      
+      // Salva gli eventi aggiornati in localStorage
+      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
+      return updatedEvents;
+    });
     
     const eventName = events.find(e => e.id === eventId)?.title || "Evento selezionato";
     

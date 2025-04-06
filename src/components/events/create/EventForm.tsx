@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -133,7 +132,8 @@ const EventForm: React.FC<EventFormProps> = ({
               personnelTypes: selectedPersonnel,
               location: eventLocation,
               address: eventAddress,
-              ...additionalData
+              ...additionalData,
+              assignedPersonnel: event.assignedPersonnel || 0
             };
           }
           return event;
@@ -153,7 +153,8 @@ const EventForm: React.FC<EventFormProps> = ({
           personnelTypes: selectedPersonnel,
           location: eventLocation,
           address: eventAddress,
-          ...additionalData
+          ...additionalData,
+          assignedPersonnel: 0
         };
         
         const updatedEvents = [...existingEvents, newEvent];

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -40,7 +39,6 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
     }
   };
 
-  // Function to get status class
   const getStatusClass = (status?: string) => {
     switch(status) {
       case 'completed':
@@ -55,26 +53,20 @@ const EventTable = ({ events, onShowDetails, onEditEvent, onDeleteEvent }: Event
     }
   };
 
-  // Function to calculate total required personnel
   const calculateTotalPersonnel = (event: Event): number => {
     if (typeof event.personnelCount === 'number') {
       return event.personnelCount;
     } else if (event.personnelCount && typeof event.personnelCount === 'object') {
       return Object.values(event.personnelCount).reduce((sum, count) => sum + Number(count), 0);
     } else {
-      // If personnelCount is not defined, default to the number of types
       return event.personnelTypes.length;
     }
   };
 
-  // Function to get assigned personnel count (mocked for now)
   const getAssignedPersonnelCount = (event: Event): number => {
-    // This would normally come from your database or state
-    // For now, we'll simulate it
     return event.assignedPersonnel || 0;
   };
 
-  // Function to get staff ratio color
   const getStaffRatioColor = (assigned: number, total: number): string => {
     if (assigned < total) {
       return 'text-orange-500 font-medium';
