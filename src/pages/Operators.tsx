@@ -1,21 +1,13 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, UserCheck, UserX, CalendarClock } from "lucide-react";
+import { Plus } from "lucide-react";
 import Layout from "@/components/Layout";
 import { toast } from "sonner";
 import {
@@ -23,55 +15,25 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Event } from "@/types/events";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
+
+// Importing our new components and hooks
 import { useNavigate } from "react-router-dom";
-
-interface Operator {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  status: "active" | "inactive";
-  assignedEvents?: number[]; // IDs degli eventi assegnati
-}
-
-const EVENTS_STORAGE_KEY = "app_events_data";
-const OPERATORS_STORAGE_KEY = "app_operators_data";
+import { useOperators, Operator } from "@/hooks/useOperators";
+import OperatorsTable from "@/components/operators/OperatorsTable";
+import OperatorForm from "@/components/operators/OperatorForm";
+import AssignEventForm from "@/components/operators/AssignEventForm";
 
 const Operators = () => {
-  const [operators, setOperators] = useState<Operator[]>([
-    {
-      id: 1,
-      name: "Mario Rossi",
-      email: "mario.rossi@example.com",
-      phone: "+39 123 456 7890",
-      status: "active",
-      assignedEvents: [],
-    },
-    {
-      id: 2,
-      name: "Luigi Verdi",
-      email: "luigi.verdi@example.com",
-      phone: "+39 098 765 4321",
-      status: "inactive",
-      assignedEvents: [],
-    },
-  ]);
-
-  const [events, setEvents] = useState<Event[]>([]);
+  const { 
+    operators, 
+    setOperators, 
+    events, 
+    handleStatusToggle, 
+    handleDelete, 
+    assignOperatorToEvent,
+    getAssignedEvents 
+  } = useOperators();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
@@ -87,57 +49,6 @@ const Operators = () => {
   });
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const storedOperators = localStorage.getItem(OPERATORS_STORAGE_KEY);
-    if (storedOperators) {
-      try {
-        setOperators(JSON.parse(storedOperators));
-      } catch (error) {
-        console.error("Errore nel caricamento degli operatori:", error);
-      }
-    } else {
-      localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
-    }
-    
-    const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
-    if (storedEvents) {
-      try {
-        const parsedEvents = JSON.parse(storedEvents);
-        const eventsWithDates = parsedEvents.map((event: any) => ({
-          ...event,
-          startDate: new Date(event.startDate),
-          endDate: new Date(event.endDate)
-        }));
-        setEvents(eventsWithDates);
-      } catch (error) {
-        console.error("Errore nel caricamento degli eventi:", error);
-        setEvents([]);
-      }
-    } else {
-      setEvents([]);
-    }
-  }, []);
-  
-  useEffect(() => {
-    localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(operators));
-  }, [operators]);
-
-  const handleStatusToggle = (id: number) => {
-    setOperators((prev) =>
-      prev.map((op) =>
-        op.id === id
-          ? { ...op, status: op.status === "active" ? "inactive" : "active" }
-          : op
-      )
-    );
-    toast.success("Stato operatore aggiornato con successo");
-  };
-
-  const handleDelete = (id: number) => {
-    setOperators((prev) => prev.filter((op) => op.id !== id));
-    toast.success("Operatore eliminato con successo");
-  };
 
   const openEditDialog = (operator: Operator) => {
     setEditingOperator(operator);
@@ -200,77 +111,14 @@ const Operators = () => {
     }
     
     const eventId = parseInt(selectedEventId);
+    const success = assignOperatorToEvent(assigningOperator.id, eventId);
     
-    setOperators((prev) => {
-      const updatedOperators = prev.map((op) => {
-        if (op.id === assigningOperator.id) {
-          const currentAssignedEvents = op.assignedEvents || [];
-          if (currentAssignedEvents.includes(eventId)) {
-            toast.info("Operatore già assegnato a questo evento");
-            return op;
-          }
-          
-          return {
-            ...op,
-            assignedEvents: [...currentAssignedEvents, eventId]
-          };
-        }
-        return op;
-      });
-      
-      localStorage.setItem(OPERATORS_STORAGE_KEY, JSON.stringify(updatedOperators));
-      return updatedOperators;
-    });
+    if (success) {
+      const eventName = events.find(e => e.id === eventId)?.title || "Evento selezionato";
+      toast.success(`${assigningOperator.name} assegnato a "${eventName}"`);
+    }
     
-    // Aggiorna il conteggio degli operatori assegnati nell'evento
-    setEvents((prevEvents) => {
-      const updatedEvents = prevEvents.map((event) => {
-        if (event.id === eventId) {
-          // Incrementa il conteggio degli operatori assegnati
-          const currentAssigned = event.assignedPersonnel || 0;
-          return {
-            ...event,
-            assignedPersonnel: currentAssigned + 1
-          };
-        }
-        return event;
-      });
-      
-      // Salva gli eventi aggiornati in localStorage
-      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(updatedEvents));
-      return updatedEvents;
-    });
-    
-    const eventName = events.find(e => e.id === eventId)?.title || "Evento selezionato";
-    
-    toast.success(`${assigningOperator.name} assegnato a "${eventName}"`);
     setIsAssignDialogOpen(false);
-  };
-
-  const formatDateRange = (start: Date, end: Date) => {
-    const sameDay = start.getDate() === end.getDate() && 
-                    start.getMonth() === end.getMonth() && 
-                    start.getFullYear() === end.getFullYear();
-    
-    const startDateStr = format(start, "d MMMM yyyy", { locale: it });
-    const endDateStr = format(end, "d MMMM yyyy", { locale: it });
-    const startTimeStr = format(start, "HH:mm");
-    const endTimeStr = format(end, "HH:mm");
-    
-    if (sameDay) {
-      return `${startDateStr}, ${startTimeStr} - ${endTimeStr}`;
-    } else {
-      return `Dal ${startDateStr}, ${startTimeStr} al ${endDateStr}, ${endTimeStr}`;
-    }
-  };
-
-  const getAssignedEvents = (operatorId: number) => {
-    const operator = operators.find(op => op.id === operatorId);
-    if (!operator || !operator.assignedEvents || operator.assignedEvents.length === 0) {
-      return [];
-    }
-    
-    return events.filter(event => operator.assignedEvents?.includes(event.id));
   };
 
   const handleEdit = (operator: Operator) => {
@@ -288,98 +136,18 @@ const Operators = () => {
           </Button>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefono</TableHead>
-                <TableHead>Stato</TableHead>
-                <TableHead>Eventi Assegnati</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {operators.map((operator) => (
-                <TableRow key={operator.id}>
-                  <TableCell>{operator.name}</TableCell>
-                  <TableCell>{operator.email}</TableCell>
-                  <TableCell>{operator.phone}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        operator.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {operator.status === "active" ? "Attivo" : "Inattivo"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {getAssignedEvents(operator.id).length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {getAssignedEvents(operator.id).map((event) => (
-                          <span 
-                            key={event.id}
-                            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800"
-                            title={formatDateRange(event.startDate, event.endDate)}
-                          >
-                            {event.title}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">Nessun evento</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleStatusToggle(operator.id)}
-                        title={operator.status === "active" ? "Disattiva operatore" : "Attiva operatore"}
-                      >
-                        {operator.status === "active" ? (
-                          <UserX className="h-4 w-4" />
-                        ) : (
-                          <UserCheck className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => handleEdit(operator)}
-                        title="Modifica operatore"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => openAssignDialog(operator)}
-                        title="Assegna a evento"
-                      >
-                        <CalendarClock className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(operator.id)}
-                        title="Elimina operatore"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <OperatorsTable 
+            operators={operators}
+            getAssignedEvents={getAssignedEvents}
+            onStatusToggle={handleStatusToggle}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onAssign={openAssignDialog}
+          />
         </CardContent>
       </Card>
 
+      {/* Operator Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -387,74 +155,16 @@ const Operators = () => {
               {editingOperator ? "Modifica Operatore" : "Nuovo Operatore"}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Nome
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="phone" className="text-right">
-                  Telefono
-                </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="col-span-3"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Stato
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: "active" | "inactive") => 
-                    setFormData({ ...formData, status: value })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Seleziona stato" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Attivo</SelectItem>
-                    <SelectItem value="inactive">Inattivo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit">
-                {editingOperator ? "Aggiorna" : "Aggiungi"}
-              </Button>
-            </DialogFooter>
-          </form>
+          <OperatorForm 
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            isEditing={!!editingOperator}
+          />
         </DialogContent>
       </Dialog>
 
+      {/* Assign Event Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -462,76 +172,14 @@ const Operators = () => {
               Assegna {assigningOperator?.name} a un evento
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleAssignSubmit}>
-            <div className="grid gap-4 py-4">
-              <Label htmlFor="event" className="font-medium">
-                Seleziona evento
-              </Label>
-              <Select
-                value={selectedEventId}
-                onValueChange={setSelectedEventId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona un evento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {events.length > 0 ? (
-                    events.map((event) => (
-                      <SelectItem key={event.id} value={event.id.toString()}>
-                        {event.title}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-events" disabled>
-                      Nessun evento disponibile
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              
-              {selectedEventId && events.length > 0 && (
-                <div className="mt-4 p-4 bg-muted rounded-md">
-                  {(() => {
-                    const event = events.find(e => e.id.toString() === selectedEventId);
-                    if (!event) return null;
-                    
-                    return (
-                      <div className="space-y-2">
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Cliente: {event.client}
-                        </div>
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Data e ora: </span>
-                          {formatDateRange(event.startDate, event.endDate)}
-                        </div>
-                        {event.location && (
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">Località: </span>
-                            {event.location}
-                          </div>
-                        )}
-                        {event.address && (
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">Indirizzo: </span>
-                            {event.address}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setIsAssignDialogOpen(false)}>
-                Annulla
-              </Button>
-              <Button type="submit" disabled={!selectedEventId || events.length === 0}>
-                Assegna
-              </Button>
-            </DialogFooter>
-          </form>
+          <AssignEventForm 
+            events={events}
+            selectedEventId={selectedEventId}
+            setSelectedEventId={setSelectedEventId}
+            onSubmit={handleAssignSubmit}
+            onCancel={() => setIsAssignDialogOpen(false)}
+            operatorName={assigningOperator?.name}
+          />
         </DialogContent>
       </Dialog>
     </Layout>
