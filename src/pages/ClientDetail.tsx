@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -34,7 +33,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { Client } from "./Clients";
-import { Event } from "./Events";
+import { Event } from "@/types/events";
 
 const CLIENTS_STORAGE_KEY = "app_clients_data";
 const EVENTS_STORAGE_KEY = "app_events_data";
@@ -47,7 +46,6 @@ const ClientDetail = () => {
   const [clientEvents, setClientEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Carica i dati del cliente
   useEffect(() => {
     const loadClient = () => {
       try {
@@ -69,19 +67,16 @@ const ClientDetail = () => {
         
         setClient(foundClient);
         
-        // Carica gli eventi associati al cliente
         const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
         if (storedEvents) {
           const events = JSON.parse(storedEvents);
           
-          // Converti le stringhe di date in oggetti Date
           const parsedEvents = events.map((event: any) => ({
             ...event,
             startDate: new Date(event.startDate),
             endDate: new Date(event.endDate)
           }));
           
-          // Filtra gli eventi per il cliente corrente
           const filteredEvents = parsedEvents.filter(
             (event: Event) => event.client === foundClient.companyName
           );
@@ -100,7 +95,6 @@ const ClientDetail = () => {
     loadClient();
   }, [id, navigate]);
   
-  // Funzione per formattare data e ora
   const formatDateRange = (start: Date, end: Date) => {
     const sameDay = start.getDate() === end.getDate() && 
                     start.getMonth() === end.getMonth() && 
