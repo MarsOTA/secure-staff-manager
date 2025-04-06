@@ -1,8 +1,9 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock, Euro } from "lucide-react";
+import { Clock, Euro, Calendar } from "lucide-react";
+import { calculateBreakDuration, calculateNetHours, countEventDays } from "./eventCreateUtils";
 
 interface HoursAndCostsSectionProps {
   grossHours: string;
@@ -11,6 +12,8 @@ interface HoursAndCostsSectionProps {
   breakEndTime: string;
   hourlyRateCost: string;
   hourlyRateSell: string;
+  startDate: Date | undefined;
+  endDate: Date | undefined;
   setGrossHours: React.Dispatch<React.SetStateAction<string>>;
   setNetHours: React.Dispatch<React.SetStateAction<string>>;
   setBreakStartTime: React.Dispatch<React.SetStateAction<string>>;
@@ -26,6 +29,8 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
   breakEndTime,
   hourlyRateCost,
   hourlyRateSell,
+  startDate,
+  endDate,
   setGrossHours,
   setNetHours,
   setBreakStartTime,
@@ -33,6 +38,29 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
   setHourlyRateCost,
   setHourlyRateSell
 }) => {
+  // Calculate days for the event
+  const eventDays = startDate && endDate ? countEventDays(startDate, endDate) : 1;
+  
+  // Calculate break duration in hours
+  const breakDurationPerDay = calculateBreakDuration(breakStartTime, breakEndTime);
+  const totalBreakDuration = breakDurationPerDay * eventDays;
+  
+  // Update net hours whenever gross hours, break times or dates change
+  useEffect(() => {
+    if (grossHours) {
+      // Calculate net hours by subtracting total break duration
+      const netHoursValue = calculateNetHours(
+        parseFloat(grossHours), 
+        breakDurationPerDay,
+        eventDays
+      );
+      
+      setNetHours(netHoursValue.toFixed(2));
+    } else {
+      setNetHours("");
+    }
+  }, [grossHours, breakStartTime, breakEndTime, eventDays, setNetHours]);
+  
   return (
     <div className="pt-4 border-t border-gray-200">
       <h3 className="text-lg font-medium mb-4">Informazioni su ore e costi</h3>
@@ -55,6 +83,10 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
               className="pl-10"
             />
           </div>
+          <div className="text-sm text-muted-foreground flex items-center">
+            <Calendar className="h-3.5 w-3.5 mr-1" />
+            {eventDays > 1 ? `${eventDays} giorni di evento` : "1 giorno di evento"}
+          </div>
         </div>
         
         <div className="space-y-2">
@@ -75,13 +107,13 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            Calcolato automaticamente (ore lorde - pausa)
+            Calcolato automaticamente (ore lorde - {totalBreakDuration.toFixed(2)} ore di pausa)
           </p>
         </div>
       </div>
       
       <div className="space-y-2 mt-4">
-        <Label>Pausa prevista</Label>
+        <Label>Pausa prevista ({breakDurationPerDay.toFixed(2)} ore × {eventDays} giorni = {totalBreakDuration.toFixed(2)} ore totali)</Label>
         <div className="flex items-center space-x-4">
           <div className="flex-1">
             <Label htmlFor="breakStartTime" className="text-sm">Da</Label>

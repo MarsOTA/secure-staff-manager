@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -6,6 +5,7 @@ import { toast } from "sonner";
 import { Event } from "@/types/events";
 import { Client } from "./Clients";
 import EventForm from "@/components/events/create/EventForm";
+import { calculateGrossHours, calculateBreakDuration, calculateNetHours, countEventDays } from "@/components/events/create/eventCreateUtils";
 
 const EVENTS_STORAGE_KEY = "app_events_data";
 const CLIENTS_STORAGE_KEY = "app_clients_data";
@@ -198,6 +198,28 @@ const EventCreate = () => {
     }
   }, [eventId, clients]);
   
+  useEffect(() => {
+    if (startDate && endDate && startTime && endTime) {
+      const fullStartDate = new Date(startDate);
+      const fullEndDate = new Date(endDate);
+      
+      const [startHours, startMinutes] = startTime.split(':').map(Number);
+      const [endHours, endMinutes] = endTime.split(':').map(Number);
+      
+      fullStartDate.setHours(startHours, startMinutes, 0, 0);
+      fullEndDate.setHours(endHours, endMinutes, 0, 0);
+      
+      const hours = calculateGrossHours(fullStartDate, fullEndDate);
+      setGrossHours(hours.toFixed(2));
+      
+      const breakDurationPerDay = calculateBreakDuration(breakStartTime, breakEndTime);
+      const eventDays = countEventDays(fullStartDate, fullEndDate);
+      
+      const netHoursValue = calculateNetHours(hours, breakDurationPerDay, eventDays);
+      setNetHours(netHoursValue.toFixed(2));
+    }
+  }, [startDate, endDate, startTime, endTime]);
+  
   const handleLocationChange = (value: string) => {
     setEventLocation(value);
     
@@ -255,24 +277,6 @@ const EventCreate = () => {
     setEventAddress(suggestion.description);
     setShowAddressSuggestions(false);
   };
-  
-  useEffect(() => {
-    if (grossHours) {
-      const breakStart = breakStartTime.split(':').map(Number);
-      const breakEnd = breakEndTime.split(':').map(Number);
-      
-      const breakStartMinutes = breakStart[0] * 60 + breakStart[1];
-      const breakEndMinutes = breakEnd[0] * 60 + breakEnd[1];
-      
-      const breakDurationHours = (breakEndMinutes - breakStartMinutes) / 60;
-      
-      const netHoursValue = Math.max(0, Number(grossHours) - breakDurationHours);
-      
-      setNetHours(netHoursValue.toFixed(2));
-    } else {
-      setNetHours("");
-    }
-  }, [grossHours, breakStartTime, breakEndTime]);
   
   const eventData = {
     title,

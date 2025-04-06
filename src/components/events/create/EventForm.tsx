@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -234,6 +235,8 @@ const EventForm: React.FC<EventFormProps> = ({
               breakEndTime={breakEndTime}
               hourlyRateCost={hourlyRateCost}
               hourlyRateSell={hourlyRateSell}
+              startDate={startDate}
+              endDate={endDate}
               setGrossHours={setters.setGrossHours}
               setNetHours={setters.setNetHours}
               setBreakStartTime={setters.setBreakStartTime}
