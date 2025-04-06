@@ -23,7 +23,9 @@ export function useEvents() {
             startDate: new Date(event.startDate),
             endDate: new Date(event.endDate),
             // Mantieni il valore di assignedPersonnel se esiste già
-            assignedPersonnel: event.assignedPersonnel || 0
+            assignedPersonnel: event.assignedPersonnel || 0,
+            breakStartTime: event.breakStartTime || '',
+            breakEndTime: event.breakEndTime || ''
           }));
           setEvents(eventsWithDates);
         } catch (error) {
@@ -46,7 +48,9 @@ export function useEvents() {
           startDate: new Date(2023, 6, 15, 18, 0),
           endDate: new Date(2023, 6, 15, 23, 30),
           personnelTypes: ["security", "doorman", "hostess/steward"],
-          assignedPersonnel: 0
+          assignedPersonnel: 0,
+          breakStartTime: "20:00",
+          breakEndTime: "21:00"
         },
         {
           id: 2,
@@ -55,7 +59,9 @@ export function useEvents() {
           startDate: new Date(2023, 7, 10, 9, 0),
           endDate: new Date(2023, 7, 12, 19, 0),
           personnelTypes: ["security", "hostess/steward"],
-          assignedPersonnel: 0
+          assignedPersonnel: 0,
+          breakStartTime: "13:00",
+          breakEndTime: "14:00"
         },
       ]);
     };

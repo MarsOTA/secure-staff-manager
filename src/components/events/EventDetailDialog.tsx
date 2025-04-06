@@ -139,6 +139,13 @@ const EventDetailDialog = ({
               )}
             </div>
           )}
+          
+          {(event.breakStartTime && event.breakEndTime) && (
+            <div>
+              <h4 className="text-sm font-medium text-muted-foreground">Pausa pranzo</h4>
+              <p className="text-base">Dalle {event.breakStartTime} alle {event.breakEndTime}</p>
+            </div>
+          )}
         </div>
         
         <DialogFooter className="flex justify-between sm:justify-between">

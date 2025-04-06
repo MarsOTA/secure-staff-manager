@@ -43,9 +43,49 @@ export const processEvents = (eventOperatorsData: any[]): Event[] => {
       hourly_rate: item.hourly_rate || 15,
       hourly_rate_sell: item.revenue_generated ? (item.revenue_generated / (item.net_hours || 1)) : 25,
       attendance: attendanceValue,
-      estimated_hours: item.total_hours || 0
+      estimated_hours: item.total_hours || 0,
+      breakStartTime: item.events.breakStartTime || '',
+      breakEndTime: item.events.breakEndTime || '',
     };
   }).filter(Boolean) as Event[];
+};
+
+// Calculate break duration in hours
+const calculateBreakDuration = (breakStartTime: string, breakEndTime: string): number => {
+  if (!breakStartTime || !breakEndTime) return 0;
+  
+  try {
+    const [startHours, startMinutes] = breakStartTime.split(':').map(Number);
+    const [endHours, endMinutes] = breakEndTime.split(':').map(Number);
+    
+    const startTotalMinutes = startHours * 60 + startMinutes;
+    const endTotalMinutes = endHours * 60 + endMinutes;
+    
+    // Calculate difference in minutes
+    const diffMinutes = endTotalMinutes - startTotalMinutes;
+    
+    // Convert to hours (decimal)
+    return diffMinutes > 0 ? diffMinutes / 60 : 0;
+  } catch (error) {
+    console.error("Errore nel calcolo della durata della pausa:", error);
+    return 0;
+  }
+};
+
+// Count number of days in an event
+const countEventDays = (startDate: string, endDate: string): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Reset hours to compare just dates
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  // Calculate difference in days
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because inclusive
+  
+  return Math.max(diffDays, 1); // Ensure at least 1 day
 };
 
 // Process payroll calculations from event data
@@ -66,7 +106,17 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     
     // Use provided hours from database first
     const totalHours = item.total_hours || 0;
-    const netHours = item.net_hours || (totalHours > 5 ? totalHours - 1 : totalHours); // 1 hour lunch break if > 5 hours
+    
+    // Calculate number of days in the event
+    const eventDays = countEventDays(event.start_date, event.end_date);
+    
+    // Calculate break duration
+    const breakDurationPerDay = calculateBreakDuration(event.breakStartTime, event.breakEndTime);
+    const totalBreakDuration = breakDurationPerDay * eventDays;
+    
+    // Calculate net hours considering breaks for each day
+    const netHours = item.net_hours || (totalHours > 0 ? Math.max(totalHours - totalBreakDuration, 0) : 0);
+    
     const hourlyRate = item.hourly_rate || 15;
     const compensation = item.total_compensation || (netHours * hourlyRate);
     const mealAllowance = item.meal_allowance || (totalHours > 5 ? 10 : 0);
@@ -91,7 +141,11 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
       totalRevenue,
       attendance: isPast && eventStatus === "completed" ? "present" as const : null,
       estimated_hours: totalHours,
-      actual_hours: actualHours  // Set actual_hours for completed events
+      actual_hours: actualHours,  // Set actual_hours for completed events
+      breakStartTime: event.breakStartTime,
+      breakEndTime: event.breakEndTime,
+      breakDuration: totalBreakDuration,
+      eventDays
     };
   }).filter(Boolean) as PayrollCalculation[];
 };

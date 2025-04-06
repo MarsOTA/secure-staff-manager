@@ -1,4 +1,3 @@
-
 // Define the event type
 export interface Event {
   id: number;
@@ -23,6 +22,8 @@ export interface PayrollCalculation {
   eventTitle: string;
   client: string;
   date: string;
+  start_date: string;
+  end_date: string;
   grossHours: number;
   netHours: number;
   compensation: number;
@@ -30,10 +31,12 @@ export interface PayrollCalculation {
   travelAllowance: number;
   totalRevenue: number;
   attendance?: "present" | "absent" | "late" | null;
-  estimated_hours?: number;
+  estimated_hours: number;
   actual_hours?: number;
-  start_date?: string;
-  end_date?: string;
+  breakStartTime?: string;
+  breakEndTime?: string;
+  breakDuration: number;
+  eventDays: number;
 }
 
 export interface PayrollSummary {

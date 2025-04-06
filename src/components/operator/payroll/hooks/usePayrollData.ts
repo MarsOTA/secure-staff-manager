@@ -22,6 +22,28 @@ export const usePayrollData = (operator: ExtendedOperator) => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Calculate break duration in hours
+  const calculateBreakDuration = (breakStartTime: string | undefined, breakEndTime: string | undefined): number => {
+    if (!breakStartTime || !breakEndTime) return 0;
+    
+    try {
+      const [startHours, startMinutes] = breakStartTime.split(':').map(Number);
+      const [endHours, endMinutes] = breakEndTime.split(':').map(Number);
+      
+      const startTotalMinutes = startHours * 60 + startMinutes;
+      const endTotalMinutes = endHours * 60 + endMinutes;
+      
+      // Calculate difference in minutes
+      const diffMinutes = endTotalMinutes - startTotalMinutes;
+      
+      // Convert to hours (decimal)
+      return diffMinutes > 0 ? diffMinutes / 60 : 0;
+    } catch (error) {
+      console.error("Errore nel calcolo della durata della pausa:", error);
+      return 0;
+    }
+  };
+
   // Update actual hours for an event
   const updateActualHours = (eventId: number, actualHours: number) => {
     try {
@@ -85,17 +107,36 @@ export const usePayrollData = (operator: ExtendedOperator) => {
 
         // Process completed events and calculate actual hours
         const processedCalculations = calculationsData.map(calc => {
+          // Count number of days in the event
+          const start = new Date(calc.start_date);
+          const end = new Date(calc.end_date);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(0, 0, 0, 0);
+          const diffTime = end.getTime() - start.getTime();
+          const eventDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because inclusive
+
+          // Calculate break duration for each day
+          const breakDuration = calculateBreakDuration(calc.breakStartTime, calc.breakEndTime) * Math.max(eventDays, 1);
+          
+          // For completed events without actual hours set, use estimated hours minus break
           if (calc.actual_hours === undefined) {
-            // For completed events without actual hours set, use estimated hours minus break
             const grossHours = calc.grossHours;
-            const netHours = grossHours > 5 ? grossHours - 1 : grossHours;
+            const netHours = Math.max(grossHours - breakDuration, 0);
+            
             return {
               ...calc,
               netHours,
-              actual_hours: netHours // Set actual_hours equal to netHours (estimated - break)
+              actual_hours: netHours, // Set actual_hours equal to netHours (estimated - break)
+              breakDuration,
+              eventDays: Math.max(eventDays, 1)
             };
           }
-          return calc;
+          
+          return {
+            ...calc,
+            breakDuration,
+            eventDays: Math.max(eventDays, 1)
+          };
         });
         
         // Set events and calculations
