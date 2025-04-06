@@ -1,6 +1,83 @@
 
 import { Operator, OPERATORS_STORAGE_KEY } from "@/hooks/useOperators";
 
+// Define the missing constants
+export const CONTRACT_TYPES = [
+  { value: "full-time", label: "Full-Time" },
+  { value: "part-time", label: "Part-Time" },
+  { value: "intermittente", label: "Intermittente" },
+  { value: "tempo-determinato", label: "Tempo Determinato" },
+  { value: "progetto", label: "A Progetto" },
+  { value: "freelance", label: "Freelance" },
+];
+
+export const SERVICES = [
+  "hostess/steward",
+  "security",
+  "doorman",
+  "promoter",
+  "receptionist",
+  "interprete",
+  "tour-guide",
+  "mascot",
+  "model",
+  "catering",
+];
+
+export const AVAILABILITY = [
+  "lunedì",
+  "martedì",
+  "mercoledì",
+  "giovedì",
+  "venerdì",
+  "sabato",
+  "domenica",
+  "festivi",
+  "mattina",
+  "pomeriggio",
+  "sera",
+  "notte",
+];
+
+export const LANGUAGES = [
+  "italiano",
+  "inglese",
+  "francese",
+  "spagnolo",
+  "tedesco",
+  "russo",
+  "cinese",
+  "arabo",
+  "giapponese",
+  "portoghese",
+];
+
+export const SIZES = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "XXXL",
+];
+
+export const HAIR_COLORS = [
+  "neri",
+  "castani",
+  "biondi",
+  "rossi",
+  "grigi",
+  "bianchi",
+  "colorati",
+];
+
+export const BODY_TYPES = [
+  "atletica",
+  "normale",
+  "plus-size",
+];
+
 // Extend the base Operator type for the OperatorProfile page
 export interface ExtendedOperator extends Operator {
   rating?: number;

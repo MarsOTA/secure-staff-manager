@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Event } from "@/types/events";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-const EVENTS_STORAGE_KEY = "app_events_data";
+export const EVENTS_STORAGE_KEY = "app_events_data";
 
 export function useEvents() {
   const [events, setEvents] = useState<Event[]>([]);
