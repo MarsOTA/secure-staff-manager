@@ -12,31 +12,31 @@ export const CONTRACT_TYPES = [
 ];
 
 export const SERVICES = [
-  "hostess/steward",
-  "security",
-  "doorman",
-  "promoter",
-  "receptionist",
-  "interprete",
-  "tour-guide",
-  "mascot",
-  "model",
-  "catering",
+  { value: "hostess/steward", label: "Hostess/Steward" },
+  { value: "security", label: "Security" },
+  { value: "doorman", label: "Doorman" },
+  { value: "promoter", label: "Promoter" },
+  { value: "receptionist", label: "Receptionist" },
+  { value: "interprete", label: "Interprete" },
+  { value: "tour-guide", label: "Tour Guide" },
+  { value: "mascot", label: "Mascot" },
+  { value: "model", label: "Model" },
+  { value: "catering", label: "Catering" },
 ];
 
 export const AVAILABILITY = [
-  "lunedì",
-  "martedì",
-  "mercoledì",
-  "giovedì",
-  "venerdì",
-  "sabato",
-  "domenica",
-  "festivi",
-  "mattina",
-  "pomeriggio",
-  "sera",
-  "notte",
+  { value: "lunedì", label: "Lunedì" },
+  { value: "martedì", label: "Martedì" },
+  { value: "mercoledì", label: "Mercoledì" },
+  { value: "giovedì", label: "Giovedì" },
+  { value: "venerdì", label: "Venerdì" },
+  { value: "sabato", label: "Sabato" },
+  { value: "domenica", label: "Domenica" },
+  { value: "festivi", label: "Festivi" },
+  { value: "mattina", label: "Mattina" },
+  { value: "pomeriggio", label: "Pomeriggio" },
+  { value: "sera", label: "Sera" },
+  { value: "notte", label: "Notte" },
 ];
 
 export const LANGUAGES = [
@@ -63,19 +63,19 @@ export const SIZES = [
 ];
 
 export const HAIR_COLORS = [
-  "neri",
-  "castani",
-  "biondi",
-  "rossi",
-  "grigi",
-  "bianchi",
-  "colorati",
+  { value: "neri", label: "Neri" },
+  { value: "castani", label: "Castani" },
+  { value: "biondi", label: "Biondi" },
+  { value: "rossi", label: "Rossi" },
+  { value: "grigi", label: "Grigi" },
+  { value: "bianchi", label: "Bianchi" },
+  { value: "colorati", label: "Colorati" },
 ];
 
 export const BODY_TYPES = [
-  "atletica",
-  "normale",
-  "plus-size",
+  { value: "atletica", label: "Atletica" },
+  { value: "normale", label: "Normale" },
+  { value: "plus-size", label: "Plus Size" },
 ];
 
 // Extend the base Operator type for the OperatorProfile page
