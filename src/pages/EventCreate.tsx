@@ -1,84 +1,23 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { toast } from "sonner";
-import { Event, WorkShift } from "@/types/events";
 import { Client } from "./Clients";
 import EventForm from "@/components/events/create/EventForm";
-import { calculateGrossHours, calculateBreakDuration, calculateNetHours, countEventDays } from "@/components/events/create/eventCreateUtils";
+import { useGoogleMapsAutocomplete } from "@/hooks/useGoogleMapsAutocomplete";
+import { useEventData } from "@/hooks/useEventData";
+import { useEventHoursCalculation } from "@/hooks/useEventHoursCalculation";
 
-const EVENTS_STORAGE_KEY = "app_events_data";
 const CLIENTS_STORAGE_KEY = "app_clients_data";
-
-interface PlacePrediction {
-  description: string;
-  place_id: string;
-}
-
-declare global {
-  interface Window {
-    google: {
-      maps: {
-        places: {
-          AutocompleteService: new () => {
-            getPlacePredictions: (
-              request: { input: string; types?: string[] },
-              callback: (
-                predictions: PlacePrediction[] | null,
-                status: string
-              ) => void
-            ) => void;
-          };
-          PlacesServiceStatus: {
-            OK: string;
-            ZERO_RESULTS: string;
-            OVER_QUERY_LIMIT: string;
-            REQUEST_DENIED: string;
-            INVALID_REQUEST: string;
-            UNKNOWN_ERROR: string;
-          };
-        };
-      };
-    };
-    initGoogleMapsCallback: () => void;
-  }
-}
 
 const EventCreate = () => {
   const navigate = useNavigate();
   const locationHook = useLocation();
-  
   const eventId = new URLSearchParams(locationHook.search).get("id");
-  
-  const [title, setTitle] = useState("");
-  const [client, setClient] = useState("");
-  const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
-  const [personnelCounts, setPersonnelCounts] = useState<Record<string, number>>({});
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("18:00");
-  const [eventLocation, setEventLocation] = useState("");
-  const [eventAddress, setEventAddress] = useState("");
-  const [locationSuggestions, setLocationSuggestions] = useState<PlacePrediction[]>([]);
-  const [addressSuggestions, setAddressSuggestions] = useState<PlacePrediction[]>([]);
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
-  
-  const [grossHours, setGrossHours] = useState("");
-  const [breakStartTime, setBreakStartTime] = useState("13:00");
-  const [breakEndTime, setBreakEndTime] = useState("14:00");
-  const [netHours, setNetHours] = useState("");
-  const [hourlyRateCost, setHourlyRateCost] = useState("");
-  const [hourlyRateSell, setHourlyRateSell] = useState("");
-  const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
   
   const [clients, setClients] = useState<Client[]>([]);
   
-  const googleScriptLoaded = useRef(false);
-  const autocompleteService = useRef<any>(null);
-  
+  // Load clients data
   useEffect(() => {
     const storedClients = localStorage.getItem(CLIENTS_STORAGE_KEY);
     if (storedClients) {
@@ -94,245 +33,86 @@ const EventCreate = () => {
     }
   }, []);
   
-  useEffect(() => {
-    if (!googleScriptLoaded.current) {
-      const initGoogleMapsServices = () => {
-        if (window.google && window.google.maps && window.google.maps.places) {
-          autocompleteService.current = new window.google.maps.places.AutocompleteService();
-          googleScriptLoaded.current = true;
-          console.log("Google Maps API loaded successfully");
-        }
-      };
-
-      const googleMapsScript = document.createElement("script");
-      googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC0HttgvqRiRYKBoRh_pnUsyqem4AqO1zY&libraries=places&callback=initGoogleMapsCallback`;
-      googleMapsScript.async = true;
-      googleMapsScript.defer = true;
-      
-      window.initGoogleMapsCallback = initGoogleMapsServices;
-      
-      document.head.appendChild(googleMapsScript);
-      
-      return () => {
-        document.head.removeChild(googleMapsScript);
-        delete window.initGoogleMapsCallback;
-      };
-    }
-  }, []);
+  // Get Google Maps autocomplete functionality
+  const googleMapsHelpers = useGoogleMapsAutocomplete();
   
-  useEffect(() => {
-    if (eventId) {
-      try {
-        const storedEvents = localStorage.getItem(EVENTS_STORAGE_KEY);
-        if (storedEvents) {
-          const events: Event[] = JSON.parse(storedEvents).map((event: any) => ({
-            ...event,
-            startDate: new Date(event.startDate),
-            endDate: new Date(event.endDate)
-          }));
-          
-          const eventToEdit = events.find(e => e.id === Number(eventId));
-          
-          if (eventToEdit) {
-            setTitle(eventToEdit.title);
-            
-            const clientObject = clients.find(c => c.companyName === eventToEdit.client);
-            if (clientObject) {
-              setClient(clientObject.id.toString());
-            }
-            
-            setSelectedPersonnel(eventToEdit.personnelTypes);
-            
-            if (eventToEdit.personnelCount && typeof eventToEdit.personnelCount === 'object') {
-              setPersonnelCounts(eventToEdit.personnelCount);
-            } else {
-              const counts: Record<string, number> = {};
-              eventToEdit.personnelTypes.forEach(type => {
-                counts[type] = 1;
-              });
-              setPersonnelCounts(counts);
-            }
-            
-            setStartDate(eventToEdit.startDate);
-            setEndDate(eventToEdit.endDate);
-            setStartTime(eventToEdit.startDate.getHours().toString().padStart(2, '0') + ":" + 
-                         eventToEdit.startDate.getMinutes().toString().padStart(2, '0'));
-            setEndTime(eventToEdit.endDate.getHours().toString().padStart(2, '0') + ":" + 
-                       eventToEdit.endDate.getMinutes().toString().padStart(2, '0'));
-            
-            if (eventToEdit.location) {
-              setEventLocation(eventToEdit.location);
-            }
-            
-            if (eventToEdit.address) {
-              setEventAddress(eventToEdit.address);
-            }
-            
-            if (eventToEdit.grossHours) {
-              setGrossHours(eventToEdit.grossHours.toString());
-            }
-            
-            if (eventToEdit.breakStartTime) {
-              setBreakStartTime(eventToEdit.breakStartTime);
-            }
-            
-            if (eventToEdit.breakEndTime) {
-              setBreakEndTime(eventToEdit.breakEndTime);
-            }
-            
-            if (eventToEdit.netHours) {
-              setNetHours(eventToEdit.netHours.toString());
-            }
-            
-            if (eventToEdit.hourlyRateCost) {
-              setHourlyRateCost(eventToEdit.hourlyRateCost.toString());
-            }
-            
-            if (eventToEdit.hourlyRateSell) {
-              setHourlyRateSell(eventToEdit.hourlyRateSell.toString());
-            }
-            
-            if (eventToEdit.workShifts && Array.isArray(eventToEdit.workShifts)) {
-              setWorkShifts(eventToEdit.workShifts);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Errore nel caricare i dati dell'evento:", error);
-        toast.error("Impossibile caricare i dati dell'evento");
-      }
-    }
-  }, [eventId, clients]);
+  // Get event data and state setters
+  const eventState = useEventData(eventId, clients);
   
-  useEffect(() => {
-    if (startDate && endDate && startTime && endTime) {
-      const fullStartDate = new Date(startDate);
-      const fullEndDate = new Date(endDate);
-      
-      const [startHours, startMinutes] = startTime.split(':').map(Number);
-      const [endHours, endMinutes] = endTime.split(':').map(Number);
-      
-      fullStartDate.setHours(startHours, startMinutes, 0, 0);
-      fullEndDate.setHours(endHours, endMinutes, 0, 0);
-      
-      const hours = calculateGrossHours(fullStartDate, fullEndDate);
-      setGrossHours(hours.toFixed(2));
-      
-      const breakDurationPerDay = calculateBreakDuration(breakStartTime, breakEndTime);
-      const eventDays = countEventDays(fullStartDate, fullEndDate);
-      
-      const netHoursValue = calculateNetHours(hours, breakDurationPerDay, eventDays);
-      setNetHours(netHoursValue.toFixed(2));
-    }
-  }, [startDate, endDate, startTime, endTime]);
+  // Setup automatic calculation of hours
+  useEventHoursCalculation(
+    eventState.startDate,
+    eventState.endDate,
+    eventState.startTime,
+    eventState.endTime,
+    eventState.breakStartTime,
+    eventState.breakEndTime,
+    eventState.setGrossHours,
+    eventState.setNetHours
+  );
   
-  const handleLocationChange = (value: string) => {
-    setEventLocation(value);
-    
-    if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
-      autocompleteService.current.getPlacePredictions(
-        {
-          input: value,
-          types: ['(cities)']
-        },
-        (predictions: PlacePrediction[] | null, status: string) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setLocationSuggestions(predictions);
-            setShowLocationSuggestions(true);
-          } else {
-            setLocationSuggestions([]);
-            setShowLocationSuggestions(false);
-          }
-        }
-      );
-    } else {
-      setShowLocationSuggestions(false);
-    }
-  };
-  
-  const handleAddressChange = (value: string) => {
-    setEventAddress(value);
-    
-    if (value.length > 2 && autocompleteService.current && googleScriptLoaded.current) {
-      autocompleteService.current.getPlacePredictions(
-        {
-          input: value,
-          types: ['address']
-        },
-        (predictions: PlacePrediction[] | null, status: string) => {
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setAddressSuggestions(predictions);
-            setShowAddressSuggestions(true);
-          } else {
-            setAddressSuggestions([]);
-            setShowAddressSuggestions(false);
-          }
-        }
-      );
-    } else {
-      setShowAddressSuggestions(false);
-    }
-  };
-  
-  const handleSelectLocationSuggestion = (suggestion: PlacePrediction) => {
-    setEventLocation(suggestion.description);
-    setShowLocationSuggestions(false);
-  };
-  
-  const handleSelectAddressSuggestion = (suggestion: PlacePrediction) => {
-    setEventAddress(suggestion.description);
-    setShowAddressSuggestions(false);
-  };
-  
+  // Prepare data objects for the EventForm
   const eventData = {
-    title,
-    client,
-    selectedPersonnel,
-    personnelCounts,
-    startDate,
-    endDate,
-    startTime,
-    endTime,
-    eventLocation,
-    eventAddress,
-    grossHours,
-    breakStartTime,
-    breakEndTime,
-    netHours,
-    hourlyRateCost,
-    hourlyRateSell,
-    workShifts
+    title: eventState.title,
+    client: eventState.client,
+    selectedPersonnel: eventState.selectedPersonnel,
+    personnelCounts: eventState.personnelCounts,
+    startDate: eventState.startDate,
+    endDate: eventState.endDate,
+    startTime: eventState.startTime,
+    endTime: eventState.endTime,
+    eventLocation: eventState.eventLocation,
+    eventAddress: eventState.eventAddress,
+    grossHours: eventState.grossHours,
+    breakStartTime: eventState.breakStartTime,
+    breakEndTime: eventState.breakEndTime,
+    netHours: eventState.netHours,
+    hourlyRateCost: eventState.hourlyRateCost,
+    hourlyRateSell: eventState.hourlyRateSell,
+    workShifts: eventState.workShifts
   };
   
   const setters = {
-    setTitle,
-    setClient,
-    setSelectedPersonnel,
-    setPersonnelCounts,
-    setStartDate,
-    setEndDate,
-    setStartTime,
-    setEndTime,
-    setEventLocation,
-    setEventAddress,
-    setGrossHours,
-    setBreakStartTime,
-    setBreakEndTime,
-    setNetHours,
-    setHourlyRateCost,
-    setHourlyRateSell,
-    setWorkShifts
+    setTitle: eventState.setTitle,
+    setClient: eventState.setClient,
+    setSelectedPersonnel: eventState.setSelectedPersonnel,
+    setPersonnelCounts: eventState.setPersonnelCounts,
+    setStartDate: eventState.setStartDate,
+    setEndDate: eventState.setEndDate,
+    setStartTime: eventState.setStartTime,
+    setEndTime: eventState.setEndTime,
+    setEventLocation: eventState.setEventLocation,
+    setEventAddress: eventState.setEventAddress,
+    setGrossHours: eventState.setGrossHours,
+    setBreakStartTime: eventState.setBreakStartTime,
+    setBreakEndTime: eventState.setBreakEndTime,
+    setNetHours: eventState.setNetHours,
+    setHourlyRateCost: eventState.setHourlyRateCost,
+    setHourlyRateSell: eventState.setHourlyRateSell,
+    setWorkShifts: eventState.setWorkShifts
   };
   
   const locationHelpers = {
-    locationSuggestions,
-    addressSuggestions,
-    showLocationSuggestions,
-    showAddressSuggestions,
-    handleLocationChange,
-    handleAddressChange,
-    handleSelectLocationSuggestion,
-    handleSelectAddressSuggestion
+    locationSuggestions: googleMapsHelpers.locationSuggestions,
+    addressSuggestions: googleMapsHelpers.addressSuggestions,
+    showLocationSuggestions: googleMapsHelpers.showLocationSuggestions,
+    showAddressSuggestions: googleMapsHelpers.showAddressSuggestions,
+    handleLocationChange: (value: string) => {
+      eventState.setEventLocation(value);
+      googleMapsHelpers.handleLocationChange(value);
+    },
+    handleAddressChange: (value: string) => {
+      eventState.setEventAddress(value);
+      googleMapsHelpers.handleAddressChange(value);
+    },
+    handleSelectLocationSuggestion: (suggestion: any) => {
+      const locationValue = googleMapsHelpers.handleSelectLocationSuggestion(suggestion);
+      eventState.setEventLocation(locationValue);
+    },
+    handleSelectAddressSuggestion: (suggestion: any) => {
+      const addressValue = googleMapsHelpers.handleSelectAddressSuggestion(suggestion);
+      eventState.setEventAddress(addressValue);
+    }
   };
 
   return (
