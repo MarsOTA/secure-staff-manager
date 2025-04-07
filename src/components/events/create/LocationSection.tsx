@@ -3,25 +3,12 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { MapPin, Building } from "lucide-react";
-
-interface PlacePrediction {
-  description: string;
-  place_id: string;
-}
+import { LocationHelpers } from "./types/eventFormTypes";
 
 interface LocationSectionProps {
   eventLocation: string;
   eventAddress: string;
-  locationHelpers: {
-    locationSuggestions: PlacePrediction[];
-    addressSuggestions: PlacePrediction[];
-    showLocationSuggestions: boolean;
-    showAddressSuggestions: boolean;
-    handleLocationChange: (value: string) => void;
-    handleAddressChange: (value: string) => void;
-    handleSelectLocationSuggestion: (suggestion: PlacePrediction) => void;
-    handleSelectAddressSuggestion: (suggestion: PlacePrediction) => void;
-  };
+  locationHelpers: LocationHelpers;
 }
 
 const LocationSection: React.FC<LocationSectionProps> = ({
