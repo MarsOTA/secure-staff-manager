@@ -1,7 +1,7 @@
 
 import React from "react";
 import { WorkShift } from "@/types/events";
-import { dayMap } from "./workShiftConstants";
+import { dayMapping } from "@/utils/dayMappingUtils";
 
 interface WeeklyShiftViewProps {
   workShifts: WorkShift[];
@@ -20,8 +20,9 @@ const WeeklyShiftView: React.FC<WeeklyShiftViewProps> = ({ workShifts }) => {
         const relevantShifts = workShifts.filter(shift => {
           if (shift.dayOfWeek === "lunedi-venerdi" && dayIndex >= 1 && dayIndex <= 5) return true;
           if (shift.dayOfWeek === "sabato-domenica" && (dayIndex === 0 || dayIndex === 6)) return true;
+          if (shift.dayOfWeek === "tutti") return true;
           
-          return dayMap[shift.dayOfWeek] === dayIndex;
+          return dayMapping[shift.dayOfWeek] === dayIndex;
         });
         
         return (

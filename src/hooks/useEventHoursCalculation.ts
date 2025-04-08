@@ -1,6 +1,7 @@
 
 import { useEffect } from "react";
-import { calculateGrossHours, calculateBreakDuration, calculateNetHours, countEventDays, calculateGrossHoursFromShifts } from "@/components/events/create/eventCreateUtils";
+import { calculateGrossHoursFromShifts, calculateNetHours } from "@/utils/hoursCalculation";
+import { calculateBreakDuration, countEventDays } from "@/utils/dateTimeUtils";
 import { WorkShift } from "@/types/events";
 
 export function useEventHoursCalculation(

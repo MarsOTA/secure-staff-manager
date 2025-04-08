@@ -1,9 +1,10 @@
-
 import React, { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Clock, Euro, Calendar } from "lucide-react";
-import { calculateBreakDuration, calculateNetHours, countEventDays } from "./eventCreateUtils";
+import { calculateBreakDuration, countEventDays } from "@/utils/dateTimeUtils";
+import { calculateNetHours } from "@/utils/hoursCalculation";
+import { WorkShift } from "@/types/events";
 
 interface HoursAndCostsSectionProps {
   grossHours: string;
@@ -20,7 +21,7 @@ interface HoursAndCostsSectionProps {
   setBreakEndTime: React.Dispatch<React.SetStateAction<string>>;
   setHourlyRateCost: React.Dispatch<React.SetStateAction<string>>;
   setHourlyRateSell: React.Dispatch<React.SetStateAction<string>>;
-  workShifts: Array<{dayOfWeek: string; startTime: string; endTime: string}>;
+  workShifts: WorkShift[];
 }
 
 const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({

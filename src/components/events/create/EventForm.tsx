@@ -11,7 +11,7 @@ import LocationSection from "./LocationSection";
 import HoursAndCostsSection from "./HoursAndCostsSection";
 import WorkShiftsSection from "./WorkShiftsSection";
 import { Client } from "@/pages/Clients";
-import { countEventDays } from "./eventCreateUtils";
+import { countEventDays } from "@/utils/dateTimeUtils";
 import { useEventFormSubmit } from "./hooks/useEventFormSubmit";
 import { EventFormData, EventFormSetters, LocationHelpers } from "./types/eventFormTypes";
 
