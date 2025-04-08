@@ -36,21 +36,20 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
             <TableHead>Data</TableHead>
             <TableHead className="text-right">Ore Stimate</TableHead>
             <TableHead className="text-right">Ore Effettive</TableHead>
-            <TableHead className="text-right">Compenso</TableHead>
+            <TableHead className="text-right">Compenso Lordo</TableHead>
             <TableHead className="text-right">Rimborsi</TableHead>
-            <TableHead className="text-right">Fatturato</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={8} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 Caricamento dati...
               </TableCell>
             </TableRow>
           ) : calculations.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 Nessun dato disponibile
               </TableCell>
             </TableRow>
@@ -85,7 +84,6 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                       Pasti: {formatCurrency(calc.mealAllowance)} / Viaggio: {formatCurrency(calc.travelAllowance)}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">{formatCurrency(calc.totalRevenue)}</TableCell>
                 </TableRow>
               ))}
               
@@ -96,7 +94,6 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                 <TableCell className="text-right">{summaryData.totalNetHours.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalCompensation)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(summaryData.totalAllowances)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(summaryData.totalRevenue)}</TableCell>
               </TableRow>
             </>
           )}

@@ -15,13 +15,17 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   const [isHoursDialogOpen, setIsHoursDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<PayrollCalculation | null>(null);
   
+  // Extract gross salary from contract data
+  const grossSalaryValue = operator.contractData?.grossSalary || "0";
+  const hourlyRate = parseFloat(grossSalaryValue) || 0;
+  
   const {
     events,
     calculations,
     summaryData,
     loading,
     updateActualHours
-  } = usePayrollData(operator);
+  } = usePayrollData(operator, hourlyRate);
   
   const handleExportCSV = () => {
     exportToCSV(calculations, summaryData, operator.name);

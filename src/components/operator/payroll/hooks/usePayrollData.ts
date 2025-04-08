@@ -10,7 +10,7 @@ import {
   validateAttendance 
 } from "../utils/payrollCalculations";
 
-export const usePayrollData = (operator: ExtendedOperator) => {
+export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: number = 0) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [calculations, setCalculations] = useState<PayrollCalculation[]>([]);
   const [summaryData, setSummaryData] = useState<PayrollSummary>({
@@ -50,16 +50,14 @@ export const usePayrollData = (operator: ExtendedOperator) => {
       // Update calculations with the new actual hours
       const updatedCalculations = calculations.map(calc => {
         if (calc.eventId === eventId) {
-          // Calculate compensation based on actual hours
-          const hourlyRate = calc.compensation / (calc.netHours || 1);
+          // Use contract hourly rate if available, otherwise use the default
+          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : calc.compensation / (calc.netHours || 1);
           const newCompensation = actualHours * hourlyRate;
-          const newRevenue = actualHours * (calc.totalRevenue / (calc.netHours || 1));
           
           return { 
             ...calc, 
             actual_hours: actualHours,
-            compensation: newCompensation,
-            totalRevenue: newRevenue
+            compensation: newCompensation
           };
         }
         return calc;
@@ -119,23 +117,21 @@ export const usePayrollData = (operator: ExtendedOperator) => {
           const breakDuration = calculateBreakDuration(calc.breakStartTime, calc.breakEndTime) * Math.max(eventDays, 1);
           
           // For completed events without actual hours set, use estimated hours minus break
-          if (calc.actual_hours === undefined) {
-            const grossHours = calc.grossHours;
-            const netHours = Math.max(grossHours - breakDuration, 0);
-            
-            return {
-              ...calc,
-              netHours,
-              actual_hours: netHours, // Set actual_hours equal to netHours (estimated - break)
-              breakDuration,
-              eventDays: Math.max(eventDays, 1)
-            };
-          }
+          const grossHours = calc.grossHours;
+          const netHours = Math.max(grossHours - breakDuration, 0);
+          const actual_hours = calc.actual_hours !== undefined ? calc.actual_hours : netHours;
+          
+          // Use contract hourly rate if available, otherwise use the default
+          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : (calc.hourly_rate || 15);
+          const compensation = actual_hours * hourlyRate;
           
           return {
             ...calc,
+            netHours,
+            actual_hours,
             breakDuration,
-            eventDays: Math.max(eventDays, 1)
+            eventDays: Math.max(eventDays, 1),
+            compensation
           };
         });
         
@@ -166,7 +162,7 @@ export const usePayrollData = (operator: ExtendedOperator) => {
     };
     
     loadEvents();
-  }, [operator.id]);
+  }, [operator.id, contractHourlyRate]);
 
   return {
     events,
