@@ -21,18 +21,28 @@ export function useEventHoursCalculation(
       // Se ci sono turni di lavoro, calcola le ore lorde dai turni
       if (workShifts.length > 0) {
         hours = calculateGrossHoursFromShifts(workShifts, startDate, endDate);
+        console.log("Ore calcolate dai turni:", hours);
       } else if (startTime && endTime) {
-        // Altrimenti usa il metodo tradizionale con orario di inizio e fine
-        const fullStartDate = new Date(startDate);
-        const fullEndDate = new Date(endDate);
+        // Altrimenti usa il metodo tradizionale basato su date di inizio e fine evento
+        const eventDays = countEventDays(startDate, endDate);
+        console.log("Numero di giorni evento:", eventDays);
         
+        // Calcola le ore per un singolo giorno
         const [startHours, startMinutes] = startTime.split(':').map(Number);
         const [endHours, endMinutes] = endTime.split(':').map(Number);
         
-        fullStartDate.setHours(startHours, startMinutes, 0, 0);
-        fullEndDate.setHours(endHours, endMinutes, 0, 0);
+        let hoursPerDay;
+        if (endHours > startHours || (endHours === startHours && endMinutes >= startMinutes)) {
+          // Lo stesso giorno
+          hoursPerDay = (endHours - startHours) + (endMinutes - startMinutes) / 60;
+        } else {
+          // Turno notturno che si estende al giorno successivo
+          hoursPerDay = (24 - startHours + endHours) + (endMinutes - startMinutes) / 60;
+        }
         
-        hours = calculateGrossHours(fullStartDate, fullEndDate);
+        // Moltiplica le ore giornaliere per il numero di giorni dell'evento
+        hours = hoursPerDay * eventDays;
+        console.log("Ore per giorno:", hoursPerDay, "x", eventDays, "=", hours);
       } else {
         hours = 0;
       }

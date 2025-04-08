@@ -31,7 +31,7 @@ const WorkShiftsSection: React.FC<WorkShiftsSectionProps> = ({
   
   const handleAddShift = () => {
     setWorkShifts([...workShifts, {
-      dayOfWeek: "lunedi",
+      dayOfWeek: "tutti", // Default: "tutti" per applicare a tutti i giorni
       startTime: "09:00",
       endTime: "18:00"
     }]);
@@ -98,3 +98,4 @@ const WorkShiftsSection: React.FC<WorkShiftsSectionProps> = ({
 };
 
 export default WorkShiftsSection;
+

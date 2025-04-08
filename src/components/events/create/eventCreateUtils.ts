@@ -39,7 +39,8 @@ export const calculateGrossHoursFromShifts = (
 ): number => {
   if (!workShifts.length || !startDate || !endDate) return 0;
   
-  const days = countEventDays(startDate, endDate);
+  // Calcola il numero totale di giorni dell'evento
+  const eventDays = countEventDays(startDate, endDate);
   let totalHours = 0;
   
   // Per ogni turno, calcola le ore
@@ -58,8 +59,8 @@ export const calculateGrossHoursFromShifts = (
       shiftDuration = (24 - startHours + endHours) + (endMinutes - startMinutes) / 60;
     }
     
-    // Moltiplica per il numero di giorni in cui questo turno è applicabile
-    let applicableDays = 1; // Default: un solo giorno
+    // Determina per quanti giorni questo turno è applicabile in base al giorno della settimana
+    let applicableDays = 0;
     
     if (shift.dayOfWeek === "lunedi-venerdi") {
       // Calcola quanti giorni feriali (lunedì-venerdì) ci sono nell'evento
@@ -67,11 +68,15 @@ export const calculateGrossHoursFromShifts = (
     } else if (shift.dayOfWeek === "sabato-domenica") {
       // Calcola quanti weekend (sabato-domenica) ci sono nell'evento
       applicableDays = calculateWeekendsInRange(startDate, endDate);
+    } else if (shift.dayOfWeek === "tutti") {
+      // Il turno si applica a tutti i giorni dell'evento
+      applicableDays = eventDays;
     } else {
       // Per singoli giorni, controlla quante volte quel giorno appare nell'intervallo
       applicableDays = countSpecificDayInRange(shift.dayOfWeek, startDate, endDate);
     }
     
+    // Moltiplica le ore del turno per il numero di giorni applicabili
     totalHours += shiftDuration * applicableDays;
   });
   
@@ -139,11 +144,18 @@ const countSpecificDayInRange = (dayOfWeek: string, startDate: Date, endDate: Da
     mercoledi: 3,
     giovedi: 4,
     venerdi: 5,
-    sabato: 6
+    sabato: 6,
+    tutti: -1 // Valore speciale per "tutti i giorni"
   };
   
   // Ottieni il numero del giorno della settimana (0-6)
   const targetDayNum = dayMap[dayOfWeek];
+  
+  // Se è "tutti", ritorna il numero totale di giorni
+  if (targetDayNum === -1) {
+    return countEventDays(startDate, endDate);
+  }
+  
   if (targetDayNum === undefined) return 0;
   
   let count = 0;
@@ -215,3 +227,4 @@ export const calculateNetHours = (grossHours: number, breakDuration: number, day
   const totalBreakDuration = breakDuration * days;
   return Math.max(0, Math.round((grossHours - totalBreakDuration) * 100) / 100);
 };
+
