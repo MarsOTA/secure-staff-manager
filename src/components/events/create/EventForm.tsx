@@ -128,6 +128,7 @@ const EventForm: React.FC<EventFormProps> = ({
               setBreakEndTime={setters.setBreakEndTime}
               setHourlyRateCost={setters.setHourlyRateCost}
               setHourlyRateSell={setters.setHourlyRateSell}
+              workShifts={eventData.workShifts}
             />
             
             <div className="pt-4">
