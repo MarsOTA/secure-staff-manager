@@ -51,7 +51,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
       const updatedCalculations = calculations.map(calc => {
         if (calc.eventId === eventId) {
           // Use contract hourly rate if available, otherwise use the default
-          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : calc.compensation / (calc.netHours || 1);
+          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : 15; // Default hourly rate
           const newCompensation = actualHours * hourlyRate;
           
           return { 
@@ -122,7 +122,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           const actual_hours = calc.actual_hours !== undefined ? calc.actual_hours : netHours;
           
           // Use contract hourly rate if available, otherwise use the default
-          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : (calc.hourly_rate || 15);
+          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : 15;
           const compensation = actual_hours * hourlyRate;
           
           return {

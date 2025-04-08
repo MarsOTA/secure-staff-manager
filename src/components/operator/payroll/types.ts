@@ -1,3 +1,4 @@
+
 // Define the event type
 export interface Event {
   id: number;
