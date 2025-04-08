@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Event } from "@/types/events";
 import { Client } from "@/pages/Clients";
 import { toast } from "sonner";
-import { combineDateTime } from "../eventCreateUtils";
+import { combineDateTime } from "@/utils/dateTimeUtils";
 import { EventFormData } from "../types/eventFormTypes";
 
 const EVENTS_STORAGE_KEY = "app_events_data";
