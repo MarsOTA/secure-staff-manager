@@ -47,6 +47,7 @@ const EventCreate = () => {
     eventState.endTime,
     eventState.breakStartTime,
     eventState.breakEndTime,
+    eventState.workShifts,
     eventState.setGrossHours,
     eventState.setNetHours
   );

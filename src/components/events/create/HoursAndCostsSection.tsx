@@ -20,6 +20,7 @@ interface HoursAndCostsSectionProps {
   setBreakEndTime: React.Dispatch<React.SetStateAction<string>>;
   setHourlyRateCost: React.Dispatch<React.SetStateAction<string>>;
   setHourlyRateSell: React.Dispatch<React.SetStateAction<string>>;
+  workShifts: Array<{dayOfWeek: string; startTime: string; endTime: string}>;
 }
 
 const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
@@ -36,7 +37,8 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
   setBreakStartTime,
   setBreakEndTime,
   setHourlyRateCost,
-  setHourlyRateSell
+  setHourlyRateSell,
+  workShifts
 }) => {
   // Calculate days for the event
   const eventDays = startDate && endDate ? countEventDays(startDate, endDate) : 1;
@@ -77,15 +79,17 @@ const HoursAndCostsSection: React.FC<HoursAndCostsSectionProps> = ({
               type="number"
               step="0.5"
               min="0"
-              placeholder="Inserisci ore lorde" 
+              placeholder={workShifts.length > 0 ? "Calcolato dai turni" : "Inserisci ore lorde"}
               value={grossHours}
               onChange={(e) => setGrossHours(e.target.value)}
-              className="pl-10"
+              className={`pl-10 ${workShifts.length > 0 ? 'bg-gray-50' : ''}`}
+              readOnly={workShifts.length > 0}
             />
           </div>
           <div className="text-sm text-muted-foreground flex items-center">
             <Calendar className="h-3.5 w-3.5 mr-1" />
             {eventDays > 1 ? `${eventDays} giorni di evento` : "1 giorno di evento"}
+            {workShifts.length > 0 && ", calcolato dai turni"}
           </div>
         </div>
         

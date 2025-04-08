@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { WorkShift } from "@/types/events";
@@ -23,6 +23,11 @@ const WorkShiftsSection: React.FC<WorkShiftsSectionProps> = ({
   showWorkShifts
 }) => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  
+  // Imposta lo stato di editing in base alla presenza di turni
+  useEffect(() => {
+    setIsEditing(workShifts.length > 0);
+  }, [workShifts.length]);
   
   const handleAddShift = () => {
     setWorkShifts([...workShifts, {
