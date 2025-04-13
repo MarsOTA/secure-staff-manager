@@ -24,7 +24,8 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
     calculations,
     summaryData,
     loading,
-    updateActualHours
+    updateActualHours,
+    updateAllowance
   } = usePayrollData(operator, hourlyRate);
   
   const handleExportCSV = () => {
@@ -50,6 +51,10 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
 
   const handleUpdateHours = (eventId: number, actualHours: number) => {
     updateActualHours(eventId, actualHours);
+  };
+  
+  const handleUpdateAllowance = (eventId: number, type: 'meal' | 'travel', value: number) => {
+    updateAllowance(eventId, type, value);
   };
   
   return (
@@ -79,6 +84,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         loading={loading} 
         onClientClick={openHoursDialog}
         onUpdateHours={handleUpdateHours}
+        onUpdateAllowance={handleUpdateAllowance}
       />
       
       {/* Hours Adjustment Dialog */}

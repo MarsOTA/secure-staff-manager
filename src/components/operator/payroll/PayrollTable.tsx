@@ -19,6 +19,7 @@ interface PayrollTableProps {
   loading: boolean;
   onClientClick: (event: PayrollCalculation) => void;
   onUpdateHours: (eventId: number, hours: number) => void;
+  onUpdateAllowance: (eventId: number, type: 'meal' | 'travel', value: number) => void;
 }
 
 const PayrollTable: React.FC<PayrollTableProps> = ({ 
@@ -26,7 +27,8 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
   summaryData, 
   loading,
   onClientClick,
-  onUpdateHours
+  onUpdateHours,
+  onUpdateAllowance
 }) => {
   const formatCurrency = (value: number) => `€ ${value.toFixed(2)}`;
   
@@ -36,6 +38,15 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
       onUpdateHours(eventId, hours);
     } else {
       toast.error("Le ore devono essere un numero valido maggiore di zero");
+    }
+  };
+  
+  const handleAllowanceChange = (eventId: number, type: 'meal' | 'travel', value: string) => {
+    const amount = parseFloat(value);
+    if (!isNaN(amount) && amount >= 0) {
+      onUpdateAllowance(eventId, type, amount);
+    } else {
+      toast.error("Il valore deve essere un numero valido maggiore o uguale a zero");
     }
   };
   
@@ -98,10 +109,33 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                     )}
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(calc.compensation)}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(calc.mealAllowance + calc.travelAllowance)}
-                    <div className="text-xs text-muted-foreground">
-                      Pasti: {formatCurrency(calc.mealAllowance)} / Viaggio: {formatCurrency(calc.travelAllowance)}
+                  <TableCell>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-muted-foreground">Pasti:</span>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={calc.mealAllowance}
+                          onChange={(e) => handleAllowanceChange(calc.eventId, 'meal', e.target.value)}
+                          className="w-20 text-right"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-muted-foreground">Viaggio:</span>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={calc.travelAllowance}
+                          onChange={(e) => handleAllowanceChange(calc.eventId, 'travel', e.target.value)}
+                          className="w-20 text-right"
+                        />
+                      </div>
+                      <div className="text-right font-medium">
+                        {formatCurrency(calc.mealAllowance + calc.travelAllowance)}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
