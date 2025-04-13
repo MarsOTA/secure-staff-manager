@@ -152,11 +152,12 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           // Calculate break duration for each day
           const breakDuration = calculateBreakDuration(calc.breakStartTime, calc.breakEndTime) * Math.max(eventDays, 1);
           
-          // UPDATED: Use netHours as the default value for actual_hours
+          // Get net hours from the event data directly
+          // We prioritize using the netHours from the event data itself
           const grossHours = calc.grossHours;
-          const netHours = Math.max(grossHours - breakDuration, 0);
+          const netHours = calc.netHours || Math.max(grossHours - breakDuration, 0);
           
-          // If actual_hours is already set, use it, otherwise use netHours
+          // Always use netHours from the event data for actual_hours if not already set
           const actual_hours = calc.actual_hours !== undefined ? calc.actual_hours : netHours;
           
           // Use contract hourly rate if available, otherwise use the default

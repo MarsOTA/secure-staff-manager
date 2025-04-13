@@ -101,7 +101,7 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const now = new Date();
     const isPast = endDate < now;
     
-    // Forza lo stato dell'evento a "completed" se è passato e non è cancellato
+    // Force the event status to "completed" if it's past and not cancelled
     const eventStatus = isPast && event.status !== "cancelled" ? "completed" : event.status;
     
     // Use provided hours from database first
@@ -114,8 +114,11 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const breakDurationPerDay = calculateBreakDuration(event.breakStartTime, event.breakEndTime);
     const totalBreakDuration = breakDurationPerDay * eventDays;
     
-    // Calculate net hours considering breaks for each day
-    const netHours = item.net_hours || (totalHours > 0 ? Math.max(totalHours - totalBreakDuration, 0) : 0);
+    // Use the provided net_hours directly if available or calculate it
+    // This ensures we use the exact value set in the event form
+    const netHours = item.net_hours !== undefined && item.net_hours !== null ? 
+                    item.net_hours : 
+                    (totalHours > 0 ? Math.max(totalHours - totalBreakDuration, 0) : 0);
     
     const hourlyRate = item.hourly_rate || 15;
     const compensation = item.total_compensation || (netHours * hourlyRate);
@@ -124,7 +127,7 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
     const totalRevenue = item.revenue_generated || (netHours * (hourlyRate * 1.667)); // Default margin
     
     // For completed events, set actual hours to net hours by default if not provided
-    const actualHours = eventStatus === "completed" ? (item.actual_hours || netHours) : undefined;
+    const actualHours = eventStatus === "completed" ? (item.actual_hours !== undefined ? item.actual_hours : netHours) : netHours;
     
     return {
       eventId: event.id,
@@ -141,7 +144,7 @@ export const processPayrollCalculations = (eventOperatorsData: any[]): PayrollCa
       totalRevenue,
       attendance: isPast && eventStatus === "completed" ? "present" as const : null,
       estimated_hours: totalHours,
-      actual_hours: actualHours,  // Set actual_hours for completed events
+      actual_hours: actualHours,  // Always use netHours as default
       breakStartTime: event.breakStartTime,
       breakEndTime: event.breakEndTime,
       breakDuration: totalBreakDuration,

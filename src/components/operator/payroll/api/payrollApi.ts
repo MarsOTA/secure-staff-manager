@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Event, PayrollCalculation } from "../types";
 import { processEvents, processPayrollCalculations } from "../utils/payrollCalculations";
@@ -75,6 +74,8 @@ export const fetchOperatorEvents = async (operatorId: number) => {
             end_date: event.endDate,
             location: event.location || '',
             status: event.status || 'upcoming',
+            breakStartTime: event.breakStartTime || '',
+            breakEndTime: event.breakEndTime || '',
             clients: {
               name: event.client
             }
@@ -201,6 +202,8 @@ export const fetchOperatorEvents = async (operatorId: number) => {
             end_date: event.endDate,
             location: event.location || '',
             status: event.status || 'upcoming',
+            breakStartTime: event.breakStartTime || '',
+            breakEndTime: event.breakEndTime || '',
             clients: {
               name: event.client
             }
