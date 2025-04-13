@@ -47,6 +47,10 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
       setIsHoursDialogOpen(false);
     }
   };
+
+  const handleUpdateHours = (eventId: number, actualHours: number) => {
+    updateActualHours(eventId, actualHours);
+  };
   
   return (
     <div className="space-y-6">
@@ -74,6 +78,7 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
         summaryData={summaryData} 
         loading={loading} 
         onClientClick={openHoursDialog}
+        onUpdateHours={handleUpdateHours}
       />
       
       {/* Hours Adjustment Dialog */}

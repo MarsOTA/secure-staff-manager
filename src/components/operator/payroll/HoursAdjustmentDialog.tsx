@@ -23,7 +23,7 @@ const HoursAdjustmentDialog: React.FC<HoursAdjustmentDialogProps> = ({
 
   React.useEffect(() => {
     if (selectedEvent) {
-      // If actual_hours is defined, use it; otherwise use the netHours (estimated - break)
+      // If actual_hours is defined, use it; otherwise use the netHours from event
       if (selectedEvent.actual_hours !== undefined) {
         setActualHours(selectedEvent.actual_hours.toString());
       } else if (selectedEvent.netHours) {
@@ -81,6 +81,12 @@ const HoursAdjustmentDialog: React.FC<HoursAdjustmentDialogProps> = ({
                 <Label htmlFor="estimatedHours">Ore Stimate:</Label>
                 <div id="estimatedHours" className="font-medium">
                   {selectedEvent.grossHours.toFixed(2)}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 items-center gap-4">
+                <Label htmlFor="netHours">Ore Nette:</Label>
+                <div id="netHours" className="font-medium">
+                  {selectedEvent.netHours.toFixed(2)}
                 </div>
               </div>
               <div className="grid grid-cols-2 items-center gap-4">

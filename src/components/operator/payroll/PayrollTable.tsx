@@ -10,12 +10,15 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PayrollCalculation, PayrollSummary } from "./types";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface PayrollTableProps {
   calculations: PayrollCalculation[];
   summaryData: PayrollSummary;
   loading: boolean;
   onClientClick: (event: PayrollCalculation) => void;
+  onUpdateHours: (eventId: number, hours: number) => void;
 }
 
 const PayrollTable: React.FC<PayrollTableProps> = ({ 
@@ -23,8 +26,18 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
   summaryData, 
   loading,
   onClientClick,
+  onUpdateHours
 }) => {
   const formatCurrency = (value: number) => `€ ${value.toFixed(2)}`;
+  
+  const handleHoursChange = (eventId: number, value: string) => {
+    const hours = parseFloat(value);
+    if (!isNaN(hours) && hours >= 0) {
+      onUpdateHours(eventId, hours);
+    } else {
+      toast.error("Le ore devono essere un numero valido maggiore di zero");
+    }
+  };
   
   return (
     <div className="rounded-md border">
@@ -69,10 +82,17 @@ const PayrollTable: React.FC<PayrollTableProps> = ({
                   </TableCell>
                   <TableCell>{calc.date}</TableCell>
                   <TableCell className="text-right">{calc.grossHours.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    {calc.actual_hours !== undefined ? calc.actual_hours.toFixed(2) : "-"}
+                  <TableCell>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={calc.actual_hours !== undefined ? calc.actual_hours : calc.netHours}
+                      onChange={(e) => handleHoursChange(calc.eventId, e.target.value)}
+                      className="w-20 text-right ml-auto"
+                    />
                     {calc.breakDuration > 0 && (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground text-right">
                         (-{calc.breakDuration.toFixed(2)}h pausa x {calc.eventDays} giorni)
                       </div>
                     )}
