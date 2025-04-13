@@ -78,6 +78,42 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
+  // Add the updateAllowance function
+  const updateAllowance = (eventId: number, type: 'meal' | 'travel', value: number) => {
+    try {
+      // Update calculations with the new allowance value
+      const updatedCalculations = calculations.map(calc => {
+        if (calc.eventId === eventId) {
+          if (type === 'meal') {
+            return { 
+              ...calc, 
+              mealAllowance: value
+            };
+          } else {
+            return { 
+              ...calc, 
+              travelAllowance: value
+            };
+          }
+        }
+        return calc;
+      });
+      
+      setCalculations(updatedCalculations);
+      
+      // Calculate new summary
+      const newSummary = calculateSummary(updatedCalculations);
+      setSummaryData(newSummary);
+      
+      toast.success("Rimborsi aggiornati con successo");
+      return true;
+    } catch (error) {
+      console.error("Errore nell'aggiornamento dei rimborsi:", error);
+      toast.error("Errore nell'aggiornamento dei rimborsi");
+      return false;
+    }
+  };
+
   // Load events and calculate payroll from Supabase or localStorage
   useEffect(() => {
     const loadEvents = async () => {
@@ -169,6 +205,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     calculations,
     summaryData,
     loading,
-    updateActualHours
+    updateActualHours,
+    updateAllowance
   };
 };
