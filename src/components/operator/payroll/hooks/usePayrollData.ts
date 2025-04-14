@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
 import { ExtendedOperator } from "@/types/operator";
-import { fetchOperatorEvents } from "../api/payrollApi";
+import { fetchOperatorEvents } from "../api"; // Updated import
 import { 
   calculateSummary, 
   processPayrollCalculations, 

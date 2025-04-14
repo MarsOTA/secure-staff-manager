@@ -1,0 +1,87 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { Event, PayrollCalculation } from "../types";
+import { processEvents, processPayrollCalculations } from "../utils/payrollCalculations";
+
+// Main function to fetch events and payroll data for an operator
+export const fetchOperatorEvents = async (operatorId: number) => {
+  console.log("Fetching events for operator ID:", operatorId);
+  
+  try {
+    // First, check if the operator exists in the database
+    const { data: operatorData, error: operatorError } = await supabase
+      .from('operators')
+      .select('id, name')
+      .eq('id', operatorId);
+      
+    if (operatorError) {
+      console.error("Error fetching operator:", operatorError);
+      return { events: [], calculations: [] };
+    }
+    
+    // If operator is not found in database, try local storage
+    if (!operatorData || operatorData.length === 0) {
+      console.log("Operator not found in database, using local data");
+      return fetchLocalStorageData(operatorId);
+    }
+    
+    console.log("Found operator in database:", operatorData);
+    
+    // Fetch events assigned to this operator from database
+    const { data: eventOperatorsData, error: eventOperatorsError } = await supabase
+      .from('event_operators')
+      .select(`
+        id,
+        event_id,
+        hourly_rate,
+        total_hours,
+        net_hours,
+        meal_allowance,
+        travel_allowance,
+        total_compensation,
+        revenue_generated,
+        events(
+          id,
+          title,
+          start_date,
+          end_date,
+          location,
+          status,
+          clients(name)
+        )
+      `)
+      .eq('operator_id', operatorId);
+    
+    if (eventOperatorsError) {
+      console.error("Error fetching operator events:", eventOperatorsError);
+      return { events: [], calculations: [] };
+    }
+    
+    console.log("Event operators data from database:", eventOperatorsData);
+    
+    // If no events found in database, check local storage
+    if (!eventOperatorsData || eventOperatorsData.length === 0) {
+      console.log("No event_operators entries found, checking local storage for assignments");
+      return fetchLocalStorageData(operatorId);
+    }
+    
+    // Update status automatically for past events
+    const updatedEventOperatorsData = updateEventStatus(eventOperatorsData);
+    
+    // Process events data with proper type casting for status and attendance
+    const eventsData = processEvents(updatedEventOperatorsData);
+    
+    // Process payroll calculations
+    const calculationsData = processPayrollCalculations(updatedEventOperatorsData);
+    
+    console.log("Processed payroll data from database:", calculationsData);
+    
+    return {
+      events: eventsData,
+      calculations: calculationsData
+    };
+  } catch (error) {
+    console.error("Error in fetchOperatorEvents:", error);
+    return { events: [], calculations: [] };
+  }
+};
