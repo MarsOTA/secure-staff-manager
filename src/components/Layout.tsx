@@ -1,12 +1,13 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Briefcase, Building2, LogOut, User } from "lucide-react";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
+  const location = useLocation();
 
   return (
     <div className="min-h-screen bg-background">
@@ -20,13 +21,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               // Operator navigation
               <>
                 <Link to="/tasks">
-                  <Button variant="outline">
+                  <Button variant={location.pathname === '/tasks' ? "default" : "outline"}>
                     <Calendar className="mr-2 h-4 w-4" />
-                    Task
+                    I Miei Turni
                   </Button>
                 </Link>
-                <Link to="/operator-profile">
-                  <Button variant="outline">
+                <Link to={`/operator-profile/${user.id}`}>
+                  <Button variant={location.pathname.includes('/operator-profile') ? "default" : "outline"}>
                     <User className="mr-2 h-4 w-4" />
                     Il Mio Profilo
                   </Button>
@@ -36,25 +37,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               // Admin navigation
               <>
                 <Link to="/operators">
-                  <Button variant="outline">
+                  <Button variant={location.pathname === '/operators' ? "default" : "outline"}>
                     <Users className="mr-2 h-4 w-4" />
                     Operatori
                   </Button>
                 </Link>
                 <Link to="/clients">
-                  <Button variant="outline">
+                  <Button variant={location.pathname === '/clients' ? "default" : "outline"}>
                     <Building2 className="mr-2 h-4 w-4" />
                     Clienti
                   </Button>
                 </Link>
                 <Link to="/events">
-                  <Button variant="outline">
+                  <Button variant={location.pathname === '/events' ? "default" : "outline"}>
                     <Calendar className="mr-2 h-4 w-4" />
                     Eventi
                   </Button>
                 </Link>
                 <Link to="/calendar">
-                  <Button variant="outline">
+                  <Button variant={location.pathname === '/calendar' ? "default" : "outline"}>
                     <Calendar className="mr-2 h-4 w-4" />
                     Calendario
                   </Button>

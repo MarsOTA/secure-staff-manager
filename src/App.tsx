@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import "./App.css";
 import Index from "./pages/Index";
@@ -39,6 +40,10 @@ function App() {
       <Route
         path="/operators"
         element={<ProtectedRoute component={Operators} />}
+      />
+      <Route
+        path="/operator-profile"
+        element={<ProtectedRoute component={OperatorProfile} />}
       />
       <Route
         path="/operator-profile/:id"

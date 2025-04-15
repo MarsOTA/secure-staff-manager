@@ -25,6 +25,7 @@ const Tasks = () => {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<TaskEvent[]>([]);
   const [checkingStatus, setCheckingStatus] = useState<Record<number, boolean>>({});
+  const [attendanceStatus, setAttendanceStatus] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!user) {
@@ -42,9 +43,35 @@ const Tasks = () => {
 
   const loadTodayEvents = async () => {
     try {
+      setLoading(true);
+      console.log("Loading events for operator ID:", user?.id);
+      
+      // Check for test/demo data
+      if (user?.email === "operator@example.com") {
+        // Provide some demo events for the test operator
+        const today = new Date();
+        const endTime = new Date(today);
+        endTime.setHours(today.getHours() + 4);
+        
+        setEvents([
+          {
+            id: 999,
+            title: "Demo Event for Testing",
+            start_date: today.toISOString(),
+            end_date: endTime.toISOString(),
+            location: "Demo Location",
+            status: "upcoming"
+          }
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // Get today's date (start of day)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-
+      
+      // Query assigned events for the operator
       const { data: eventOperators, error } = await supabase
         .from('event_operators')
         .select(`
@@ -54,30 +81,74 @@ const Tasks = () => {
             title,
             start_date,
             end_date,
-            location
+            location,
+            status
           )
         `)
-        .eq('operator_id', user?.id)
-        .gte('events.start_date', today.toISOString())
-        .lt('events.end_date', new Date(today.setDate(today.getDate() + 1)).toISOString());
+        .eq('operator_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching events:", error);
+        throw error;
+      }
 
-      const formattedEvents = eventOperators.map(eo => ({
-        id: eo.events.id,
-        title: eo.events.title,
-        start_date: eo.events.start_date,
-        end_date: eo.events.end_date,
-        location: eo.events.location,
-        status: 'upcoming'
-      }));
+      console.log("Raw events data:", eventOperators);
 
+      // Format the events
+      const formattedEvents = eventOperators
+        .filter(eo => eo.events) // Filter out any entries with null events
+        .map(eo => ({
+          id: eo.events.id,
+          title: eo.events.title,
+          start_date: eo.events.start_date,
+          end_date: eo.events.end_date,
+          location: eo.events.location || "",
+          status: eo.events.status || "upcoming"
+        }));
+      
+      console.log("Formatted events:", formattedEvents);
+      
       setEvents(formattedEvents);
+
+      // Load attendance status for each event
+      for (const event of formattedEvents) {
+        await loadAttendanceStatus(event.id);
+      }
+
     } catch (error) {
       console.error('Error loading events:', error);
       toast.error("Errore nel caricamento degli eventi");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAttendanceStatus = async (eventId: number) => {
+    if (!user) return;
+
+    try {
+      // Get the latest attendance record for this event
+      const { data: lastAttendance, error } = await supabase
+        .from('attendance')
+        .select('status')
+        .eq('event_id', eventId)
+        .eq('operator_id', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error("Error loading attendance status:", error);
+        return;
+      }
+
+      if (lastAttendance && lastAttendance.length > 0) {
+        setAttendanceStatus(prev => ({ 
+          ...prev, 
+          [eventId]: lastAttendance[0].status 
+        }));
+      }
+    } catch (error) {
+      console.error("Error loading attendance:", error);
     }
   };
 
@@ -99,22 +170,28 @@ const Tasks = () => {
         .order('timestamp', { ascending: false })
         .limit(1);
 
-      const isCheckIn = !lastAttendance || lastAttendance[0]?.status === 'check-out';
+      const isCheckIn = !lastAttendance || lastAttendance.length === 0 || lastAttendance[0]?.status === 'check-out';
+      const newStatus = isCheckIn ? 'check-in' : 'check-out';
       
+      // Insert new attendance record
       const { error } = await supabase
         .from('attendance')
         .insert({
           operator_id: user.id,
           event_id: eventId,
-          status: isCheckIn ? 'check-in' : 'check-out',
+          status: newStatus,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude
         });
 
       if (error) throw error;
 
+      // Update local state
+      setAttendanceStatus(prev => ({ ...prev, [eventId]: newStatus }));
       toast.success(`${isCheckIn ? 'Check-in' : 'Check-out'} effettuato con successo`);
-      loadTodayEvents();
+      
+      // Reload events to get updated data
+      await loadTodayEvents();
     } catch (error) {
       console.error('Error during check-in/out:', error);
       toast.error("Errore durante il check-in/out");
@@ -134,6 +211,12 @@ const Tasks = () => {
     });
   };
 
+  const getButtonLabel = (eventId: number) => {
+    const status = attendanceStatus[eventId];
+    if (!status || status === 'check-out') return 'Check-in';
+    return 'Check-out';
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -147,11 +230,11 @@ const Tasks = () => {
   return (
     <Layout>
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-6">I miei turni di oggi</h1>
+        <h1 className="text-2xl font-bold mb-6">I miei turni</h1>
         {events.length === 0 ? (
           <Card>
             <CardContent className="p-6">
-              <p className="text-center text-muted-foreground">Nessun turno programmato per oggi</p>
+              <p className="text-center text-muted-foreground">Nessun turno assegnato</p>
             </CardContent>
           </Card>
         ) : (
@@ -176,16 +259,24 @@ const Tasks = () => {
                     <div>
                       <span className="font-medium">Luogo:</span> {event.location}
                     </div>
+                    {attendanceStatus[event.id] && (
+                      <div>
+                        <span className="font-medium">Stato attuale:</span>{" "}
+                        <span className="px-2 py-1 text-sm rounded-full bg-green-100 text-green-800">
+                          {attendanceStatus[event.id] === 'check-in' ? 'Presente' : 'Uscito'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <Button
-                    className="w-full"
+                    className={`w-full ${attendanceStatus[event.id] === 'check-in' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}`}
                     onClick={() => handleCheckInOut(event.id)}
                     disabled={checkingStatus[event.id]}
                   >
                     {checkingStatus[event.id] ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : null}
-                    Check-in/out
+                    {getButtonLabel(event.id)}
                   </Button>
                 </CardContent>
               </Card>

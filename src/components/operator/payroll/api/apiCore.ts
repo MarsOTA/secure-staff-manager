@@ -78,6 +78,48 @@ export const fetchOperatorEvents = async (operatorId: number) => {
     
     console.log("Processed payroll data from database:", calculationsData);
     
+    // Fetch attendance records for this operator
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('operator_id', operatorId);
+      
+    if (attendanceError) {
+      console.error("Error fetching attendance records:", attendanceError);
+    } else if (attendanceRecords && attendanceRecords.length > 0) {
+      console.log("Found attendance records:", attendanceRecords);
+      
+      // Group attendance records by event_id
+      const attendanceByEvent = attendanceRecords.reduce((acc, record) => {
+        if (!acc[record.event_id]) {
+          acc[record.event_id] = [];
+        }
+        acc[record.event_id].push(record);
+        return acc;
+      }, {} as Record<number, any[]>);
+      
+      // Update events with attendance data
+      for (let i = 0; i < eventsData.length; i++) {
+        const eventId = eventsData[i].id;
+        if (attendanceByEvent[eventId]) {
+          // Sort by timestamp (newest first)
+          const eventAttendance = attendanceByEvent[eventId].sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+          
+          // Use the most recent record's status
+          const lastRecord = eventAttendance[0];
+          if (lastRecord.status === 'check-in') {
+            eventsData[i].attendance = 'present';
+            calculationsData[i].attendance = 'present';
+          } else if (lastRecord.status === 'check-out') {
+            eventsData[i].attendance = 'completed';
+            calculationsData[i].attendance = 'completed';
+          }
+        }
+      }
+    }
+    
     return {
       events: eventsData,
       calculations: calculationsData

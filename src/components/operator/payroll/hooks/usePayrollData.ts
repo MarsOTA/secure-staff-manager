@@ -139,8 +139,39 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           return;
         }
 
+        // Fetch attendance records for each event
+        const eventsWithAttendance = await Promise.all(eventsData.map(async (event) => {
+          // Get attendance records for this event
+          const { data: attendanceRecords, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('event_id', event.id)
+            .eq('operator_id', operator.id)
+            .order('timestamp', { ascending: false });
+            
+          if (error) {
+            console.error("Error fetching attendance records:", error);
+            return event;
+          }
+          
+          // If there are attendance records, update the event's attendance status
+          if (attendanceRecords && attendanceRecords.length > 0) {
+            // Use the most recent record's status
+            const lastRecord = attendanceRecords[0];
+            return {
+              ...event,
+              attendance: lastRecord.status === 'check-in' ? 'present' : (lastRecord.status === 'check-out' ? 'completed' : null)
+            };
+          }
+          
+          return event;
+        }));
+
         // Process completed events and calculate actual hours
         const processedCalculations = calculationsData.map(calc => {
+          // Find attendance records for this event
+          const eventWithAttendance = eventsWithAttendance.find(e => e.id === calc.eventId);
+          
           // Count number of days in the event
           const start = new Date(calc.start_date);
           const end = new Date(calc.end_date);
@@ -170,12 +201,13 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
             actual_hours,
             breakDuration,
             eventDays: Math.max(eventDays, 1),
-            compensation
+            compensation,
+            attendance: eventWithAttendance?.attendance || calc.attendance
           };
         });
         
         // Set events and calculations
-        setEvents(eventsData);
+        setEvents(eventsWithAttendance);
         setCalculations(processedCalculations);
         
         // Calculate summary
