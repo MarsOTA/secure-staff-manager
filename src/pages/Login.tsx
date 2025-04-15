@@ -4,10 +4,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoCircle } from "lucide-react";
+import { Info } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -39,7 +39,7 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <Alert className="mb-4 bg-blue-50">
-            <InfoCircle className="h-4 w-4" />
+            <Info className="h-4 w-4" />
             <AlertDescription>
               Per accedere usare una delle seguenti credenziali:
               <ul className="list-disc pl-5 mt-2">
