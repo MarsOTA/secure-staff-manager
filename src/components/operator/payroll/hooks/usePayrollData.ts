@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
 import { ExtendedOperator } from "@/types/operator";
 import { fetchOperatorEvents } from "../api"; // Updated import
+import { supabase } from "@/integrations/supabase/client"; // Add missing import
 import { 
   calculateSummary, 
   processPayrollCalculations, 
@@ -206,12 +207,12 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           };
         });
         
-        // Set events and calculations
-        setEvents(eventsWithAttendance);
-        setCalculations(processedCalculations);
+        // Set events and calculations with proper type casting
+        setEvents(eventsWithAttendance as Event[]);
+        setCalculations(processedCalculations as PayrollCalculation[]);
         
         // Calculate summary
-        const summary = calculateSummary(processedCalculations);
+        const summary = calculateSummary(processedCalculations as PayrollCalculation[]);
         setSummaryData(summary);
         
       } catch (error) {
