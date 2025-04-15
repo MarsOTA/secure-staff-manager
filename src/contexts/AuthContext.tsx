@@ -45,11 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // For demo purposes, we're using a simple password check
       // In production, you should use proper password hashing
       if (password === "password") {
-        const userData = {
+        // Ensure that auth_type is either 'operator' or 'admin'
+        const auth_type = operators.auth_type === 'admin' ? 'admin' : 'operator';
+        
+        const userData: User = {
           id: operators.id,
           email: operators.email,
           name: operators.name,
-          auth_type: operators.auth_type
+          auth_type: auth_type
         };
         
         setUser(userData);
@@ -59,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast.success("Login effettuato con successo");
         // Redirect operators to their task page
-        if (operators.auth_type === 'operator') {
+        if (auth_type === 'operator') {
           navigate("/tasks");
         } else {
           navigate("/dashboard");
