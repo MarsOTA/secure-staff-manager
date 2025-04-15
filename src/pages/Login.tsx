@@ -1,10 +1,13 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoCircle } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -20,6 +23,7 @@ const Login = () => {
       await login(email, password, remember);
     } catch (error) {
       // Error is handled in AuthContext
+      console.error("Login failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -34,6 +38,17 @@ const Login = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4 bg-blue-50">
+            <InfoCircle className="h-4 w-4" />
+            <AlertDescription>
+              Per accedere usare una delle seguenti credenziali:
+              <ul className="list-disc pl-5 mt-2">
+                <li>Admin: admin@example.com / password</li>
+                <li>Operatore: operator@example.com / password</li>
+              </ul>
+            </AlertDescription>
+          </Alert>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

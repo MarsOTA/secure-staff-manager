@@ -33,6 +33,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, remember: boolean) => {
     try {
+      console.log("Attempting login with:", email);
+      
+      // For demo purposes, we'll add some hardcoded credentials
+      if (email === "admin@example.com" && password === "password") {
+        const adminUser: User = {
+          id: 1,
+          email: "admin@example.com",
+          name: "Admin User",
+          auth_type: "admin"
+        };
+        
+        setUser(adminUser);
+        if (remember) {
+          localStorage.setItem("user", JSON.stringify(adminUser));
+        }
+        
+        toast.success("Login effettuato con successo");
+        navigate("/dashboard");
+        return;
+      }
+      
+      if (email === "operator@example.com" && password === "password") {
+        const operatorUser: User = {
+          id: 2,
+          email: "operator@example.com",
+          name: "Operator User",
+          auth_type: "operator"
+        };
+        
+        setUser(operatorUser);
+        if (remember) {
+          localStorage.setItem("user", JSON.stringify(operatorUser));
+        }
+        
+        toast.success("Login effettuato con successo");
+        navigate("/tasks");
+        return;
+      }
+
       // Try to find operator with given email
       const { data: operators, error: operatorError } = await supabase
         .from('operators')
@@ -40,7 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('email', email)
         .single();
 
-      if (operatorError) throw new Error("Credenziali non valide");
+      console.log("Supabase response:", operators, operatorError);
+
+      if (operatorError) {
+        console.error("Error fetching operator:", operatorError);
+        throw new Error("Credenziali non valide");
+      }
       
       // For demo purposes, we're using a simple password check
       // In production, you should use proper password hashing
@@ -71,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error("Credenziali non valide");
       }
     } catch (error) {
+      console.error("Login error:", error);
       toast.error(error instanceof Error ? error.message : "Errore durante il login");
       throw error;
     }
