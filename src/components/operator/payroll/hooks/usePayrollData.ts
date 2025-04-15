@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
 import { ExtendedOperator } from "@/types/operator";
-import { fetchOperatorEvents } from "../api"; // Updated import
-import { supabase } from "@/integrations/supabase/client"; // Add missing import
+import { fetchOperatorEvents } from "../api/apiCore";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   calculateSummary, 
   processPayrollCalculations, 
@@ -23,7 +22,6 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
   });
   const [loading, setLoading] = useState(true);
 
-  // Calculate break duration in hours
   const calculateBreakDuration = (breakStartTime: string | undefined, breakEndTime: string | undefined): number => {
     if (!breakStartTime || !breakEndTime) return 0;
     
@@ -34,10 +32,8 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
       const startTotalMinutes = startHours * 60 + startMinutes;
       const endTotalMinutes = endHours * 60 + endMinutes;
       
-      // Calculate difference in minutes
       const diffMinutes = endTotalMinutes - startTotalMinutes;
       
-      // Convert to hours (decimal)
       return diffMinutes > 0 ? diffMinutes / 60 : 0;
     } catch (error) {
       console.error("Errore nel calcolo della durata della pausa:", error);
@@ -45,14 +41,11 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
-  // Update actual hours for an event
   const updateActualHours = (eventId: number, actualHours: number) => {
     try {
-      // Update calculations with the new actual hours
       const updatedCalculations = calculations.map(calc => {
         if (calc.eventId === eventId) {
-          // Use contract hourly rate if available, otherwise use the default
-          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : 15; // Default hourly rate
+          const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : 15;
           const newCompensation = actualHours * hourlyRate;
           
           return { 
@@ -66,7 +59,6 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
       
       setCalculations(updatedCalculations);
       
-      // Calculate new summary
       const newSummary = calculateSummary(updatedCalculations);
       setSummaryData(newSummary);
       
@@ -79,10 +71,8 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
-  // Add the updateAllowance function
   const updateAllowance = (eventId: number, type: 'meal' | 'travel', value: number) => {
     try {
-      // Update calculations with the new allowance value
       const updatedCalculations = calculations.map(calc => {
         if (calc.eventId === eventId) {
           if (type === 'meal') {
@@ -102,7 +92,6 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
       
       setCalculations(updatedCalculations);
       
-      // Calculate new summary
       const newSummary = calculateSummary(updatedCalculations);
       setSummaryData(newSummary);
       
@@ -115,37 +104,40 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
-  // Add the updateAttendance function
   const updateAttendance = async (eventId: number, attendance: string | null) => {
     try {
-      // Update events with the new attendance status
+      if (!attendance) {
+        toast.error("Stato di presenza non valido");
+        return false;
+      }
+
+      const validAttendance = attendance as "present" | "absent" | "late" | "completed" | null;
+      
       const updatedEvents = events.map(event => {
         if (event.id === eventId) {
           return { 
             ...event, 
-            attendance: attendance as "present" | "absent" | "late" | "completed" | null
+            attendance: validAttendance
           };
         }
         return event;
       });
       
-      // Update calculations too if the event is present
       const updatedCalculations = calculations.map(calc => {
         if (calc.eventId === eventId) {
           return { 
             ...calc, 
-            attendance: attendance as "present" | "absent" | "late" | "completed" | null
+            attendance: validAttendance
           };
         }
         return calc;
       });
       
-      // Update state
-      setEvents(updatedEvents);
-      setCalculations(updatedCalculations);
+      setEvents(updatedEvents as Event[]);
+      setCalculations(updatedCalculations as PayrollCalculation[]);
       
-      // Update in the database if available
       if (operator.id) {
+        console.log("Updating attendance in database:", eventId, attendance, operator.id);
         const { error } = await supabase
           .from('attendance')
           .insert({
@@ -158,9 +150,14 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           
         if (error) {
           console.error("Error updating attendance in database:", error);
+          toast.error("Errore nell'aggiornamento dello stato di presenza nel database");
+          return false;
         }
+        
+        console.log("Successfully updated attendance in database");
       }
       
+      toast.success("Stato di presenza aggiornato con successo");
       return true;
     } catch (error) {
       console.error("Errore nell'aggiornamento dello stato di presenza:", error);
@@ -169,14 +166,12 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
-  // Load events and calculate payroll from Supabase or localStorage
   useEffect(() => {
     const loadEvents = async () => {
       try {
         setLoading(true);
         console.log("Loading events for operator ID:", operator.id);
         
-        // Fetch events for this operator
         const { events: eventsData, calculations: calculationsData } = await fetchOperatorEvents(operator.id);
         
         if (!eventsData || eventsData.length === 0) {
@@ -194,9 +189,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           return;
         }
 
-        // Fetch attendance records for each event
         const eventsWithAttendance = await Promise.all(eventsData.map(async (event) => {
-          // Get attendance records for this event
           const { data: attendanceRecords, error } = await supabase
             .from('attendance')
             .select('*')
@@ -209,44 +202,43 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
             return event;
           }
           
-          // If there are attendance records, update the event's attendance status
           if (attendanceRecords && attendanceRecords.length > 0) {
-            // Use the most recent record's status
             const lastRecord = attendanceRecords[0];
+            const statusMap: Record<string, "present" | "absent" | "late" | "completed"> = {
+              'check-in': 'present',
+              'check-out': 'completed',
+              'present': 'present',
+              'absent': 'absent',
+              'late': 'late',
+              'completed': 'completed'
+            };
+            
             return {
               ...event,
-              attendance: lastRecord.status === 'check-in' ? 'present' : (lastRecord.status === 'check-out' ? 'completed' : null)
+              attendance: statusMap[lastRecord.status] || null
             };
           }
           
           return event;
         }));
 
-        // Process completed events and calculate actual hours
         const processedCalculations = calculationsData.map(calc => {
-          // Find attendance records for this event
           const eventWithAttendance = eventsWithAttendance.find(e => e.id === calc.eventId);
           
-          // Count number of days in the event
           const start = new Date(calc.start_date);
           const end = new Date(calc.end_date);
           start.setHours(0, 0, 0, 0);
           end.setHours(0, 0, 0, 0);
           const diffTime = end.getTime() - start.getTime();
-          const eventDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because inclusive
-
-          // Calculate break duration for each day
+          const eventDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          
           const breakDuration = calculateBreakDuration(calc.breakStartTime, calc.breakEndTime) * Math.max(eventDays, 1);
           
-          // Get net hours from the event data directly
-          // We prioritize using the netHours from the event data itself
           const grossHours = calc.grossHours;
           const netHours = calc.netHours || Math.max(grossHours - breakDuration, 0);
           
-          // Always use netHours from the event data for actual_hours if not already set
           const actual_hours = calc.actual_hours !== undefined ? calc.actual_hours : netHours;
           
-          // Use contract hourly rate if available, otherwise use the default
           const hourlyRate = contractHourlyRate > 0 ? contractHourlyRate : 15;
           const compensation = actual_hours * hourlyRate;
           
@@ -261,11 +253,9 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           };
         });
         
-        // Set events and calculations with proper type casting
         setEvents(eventsWithAttendance as Event[]);
         setCalculations(processedCalculations as PayrollCalculation[]);
         
-        // Calculate summary
         const summary = calculateSummary(processedCalculations as PayrollCalculation[]);
         setSummaryData(summary);
         

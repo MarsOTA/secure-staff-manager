@@ -122,9 +122,9 @@ export const fetchOperatorEvents = async (operatorId: number) => {
           } else if (lastRecord.status === 'present' || lastRecord.status === 'absent' || 
                      lastRecord.status === 'late' || lastRecord.status === 'completed') {
             // Direct attendance status
-            eventsData[i].attendance = lastRecord.status;
+            eventsData[i].attendance = lastRecord.status as "present" | "absent" | "late" | "completed";
             if (i < calculationsData.length) {
-              calculationsData[i].attendance = lastRecord.status;
+              calculationsData[i].attendance = lastRecord.status as "present" | "absent" | "late" | "completed";
             }
           }
         }

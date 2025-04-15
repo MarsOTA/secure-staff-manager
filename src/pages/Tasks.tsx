@@ -129,7 +129,7 @@ const Tasks = () => {
   };
 
   const loadAttendanceStatus = async (eventId: number) => {
-    if (!user) return;
+    if (!user?.id) return;
 
     try {
       // Get the latest attendance record for this event
@@ -159,28 +159,53 @@ const Tasks = () => {
   };
 
   const handleCheckInOut = async (eventId: number) => {
-    if (!user) return;
+    if (!user?.id) {
+      toast.error("Utente non autenticato");
+      return;
+    }
 
     setCheckingStatus(prev => ({ ...prev, [eventId]: true }));
 
     try {
-      // Get current position
-      const position = await getCurrentPosition();
+      console.log("Starting check-in/out process for event:", eventId);
+      
+      // Get position
+      let position;
+      try {
+        position = await getCurrentPosition();
+        console.log("Current position:", position.coords);
+      } catch (posError) {
+        console.error("Error getting position:", posError);
+        toast.error("Non è stato possibile ottenere la posizione. Procedendo senza geolocalizzazione.");
+        // Continue without position data
+        position = { coords: { latitude: null, longitude: null } };
+      }
       
       // Get the latest attendance record for this event
-      const { data: lastAttendance } = await supabase
+      const { data: lastAttendance, error: attendanceError } = await supabase
         .from('attendance')
         .select('status')
         .eq('event_id', eventId)
         .eq('operator_id', user.id)
         .order('timestamp', { ascending: false })
         .limit(1);
+        
+      if (attendanceError) {
+        console.error("Error checking existing attendance:", attendanceError);
+        throw attendanceError;
+      }
 
-      const isCheckIn = !lastAttendance || lastAttendance.length === 0 || lastAttendance[0]?.status === 'check-out';
+      const isCheckIn = !lastAttendance || lastAttendance.length === 0 || 
+                        lastAttendance[0]?.status === 'check-out' || 
+                        lastAttendance[0]?.status === 'absent';
+                        
       const newStatus = isCheckIn ? 'check-in' : 'check-out';
       
+      console.log("Previous attendance status:", lastAttendance?.[0]?.status);
+      console.log("New status will be:", newStatus);
+      
       // Insert new attendance record
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('attendance')
         .insert({
           operator_id: user.id,
@@ -194,6 +219,8 @@ const Tasks = () => {
         console.error("Error inserting attendance record:", error);
         throw error;
       }
+
+      console.log("Successfully inserted attendance record:", data);
 
       // Update local state
       setAttendanceStatus(prev => ({ ...prev, [eventId]: newStatus }));
@@ -216,13 +243,17 @@ const Tasks = () => {
         return;
       }
 
-      navigator.geolocation.getCurrentPosition(resolve, reject);
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
     });
   };
 
   const getButtonLabel = (eventId: number) => {
     const status = attendanceStatus[eventId];
-    if (!status || status === 'check-out') return 'Check-in';
+    if (!status || status === 'check-out' || status === 'absent') return 'Check-in';
     return 'Check-out';
   };
 
@@ -271,14 +302,26 @@ const Tasks = () => {
                     {attendanceStatus[event.id] && (
                       <div>
                         <span className="font-medium">Stato attuale:</span>{" "}
-                        <span className="px-2 py-1 text-sm rounded-full bg-green-100 text-green-800">
-                          {attendanceStatus[event.id] === 'check-in' ? 'Presente' : 'Uscito'}
+                        <span className={`px-2 py-1 text-sm rounded-full ${
+                          attendanceStatus[event.id] === 'check-in' 
+                            ? 'bg-green-100 text-green-800'
+                            : attendanceStatus[event.id] === 'check-out'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {attendanceStatus[event.id] === 'check-in' ? 'Presente' : 
+                           attendanceStatus[event.id] === 'check-out' ? 'Uscito' : 
+                           attendanceStatus[event.id]}
                         </span>
                       </div>
                     )}
                   </div>
                   <Button
-                    className={`w-full ${attendanceStatus[event.id] === 'check-in' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}`}
+                    className={`w-full ${
+                      attendanceStatus[event.id] === 'check-in' 
+                        ? 'bg-amber-500 hover:bg-amber-600' 
+                        : 'bg-green-500 hover:bg-green-600'
+                    }`}
                     onClick={() => handleCheckInOut(event.id)}
                     disabled={checkingStatus[event.id]}
                   >
