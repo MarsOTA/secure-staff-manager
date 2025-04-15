@@ -1,6 +1,7 @@
 
 import { Event, PayrollCalculation } from "../types";
 import { processEvents, processPayrollCalculations } from "../utils/payrollCalculations";
+import { updateEventStatus } from "./eventStatusUtils";
 
 // Helper function to calculate hours between two dates
 export const calculateHours = (startDate: Date, endDate: Date): number => {

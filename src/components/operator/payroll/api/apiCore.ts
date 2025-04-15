@@ -2,6 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Event, PayrollCalculation } from "../types";
 import { processEvents, processPayrollCalculations } from "../utils/payrollCalculations";
+import { fetchLocalStorageData } from "./localStorageApi";
+import { updateEventStatus } from "./eventStatusUtils";
 
 // Main function to fetch events and payroll data for an operator
 export const fetchOperatorEvents = async (operatorId: number) => {
