@@ -115,6 +115,60 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     }
   };
 
+  // Add the updateAttendance function
+  const updateAttendance = async (eventId: number, attendance: string | null) => {
+    try {
+      // Update events with the new attendance status
+      const updatedEvents = events.map(event => {
+        if (event.id === eventId) {
+          return { 
+            ...event, 
+            attendance: attendance as "present" | "absent" | "late" | "completed" | null
+          };
+        }
+        return event;
+      });
+      
+      // Update calculations too if the event is present
+      const updatedCalculations = calculations.map(calc => {
+        if (calc.eventId === eventId) {
+          return { 
+            ...calc, 
+            attendance: attendance as "present" | "absent" | "late" | "completed" | null
+          };
+        }
+        return calc;
+      });
+      
+      // Update state
+      setEvents(updatedEvents);
+      setCalculations(updatedCalculations);
+      
+      // Update in the database if available
+      if (operator.id) {
+        const { error } = await supabase
+          .from('attendance')
+          .insert({
+            operator_id: operator.id,
+            event_id: eventId,
+            status: attendance,
+            latitude: null,
+            longitude: null
+          });
+          
+        if (error) {
+          console.error("Error updating attendance in database:", error);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Errore nell'aggiornamento dello stato di presenza:", error);
+      toast.error("Errore nell'aggiornamento dello stato di presenza");
+      return false;
+    }
+  };
+
   // Load events and calculate payroll from Supabase or localStorage
   useEffect(() => {
     const loadEvents = async () => {
@@ -242,6 +296,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
     summaryData,
     loading,
     updateActualHours,
-    updateAllowance
+    updateAllowance,
+    updateAttendance
   };
 };

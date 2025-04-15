@@ -67,10 +67,6 @@ const Tasks = () => {
         return;
       }
 
-      // Get today's date (start of day)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
       // Query assigned events for the operator
       const { data: eventOperators, error } = await supabase
         .from('event_operators')
@@ -89,10 +85,19 @@ const Tasks = () => {
 
       if (error) {
         console.error("Error fetching events:", error);
-        throw error;
+        toast.error("Errore nel caricamento degli eventi");
+        setLoading(false);
+        return;
       }
 
       console.log("Raw events data:", eventOperators);
+
+      if (!eventOperators || eventOperators.length === 0) {
+        console.log("No events found for operator");
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
 
       // Format the events
       const formattedEvents = eventOperators
@@ -114,7 +119,7 @@ const Tasks = () => {
       for (const event of formattedEvents) {
         await loadAttendanceStatus(event.id);
       }
-
+      
     } catch (error) {
       console.error('Error loading events:', error);
       toast.error("Errore nel caricamento degli eventi");
@@ -146,6 +151,7 @@ const Tasks = () => {
           ...prev, 
           [eventId]: lastAttendance[0].status 
         }));
+        console.log(`Attendance status for event ${eventId}:`, lastAttendance[0].status);
       }
     } catch (error) {
       console.error("Error loading attendance:", error);
@@ -184,7 +190,10 @@ const Tasks = () => {
           longitude: position.coords.longitude
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error inserting attendance record:", error);
+        throw error;
+      }
 
       // Update local state
       setAttendanceStatus(prev => ({ ...prev, [eventId]: newStatus }));

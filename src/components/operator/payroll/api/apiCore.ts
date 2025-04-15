@@ -111,10 +111,21 @@ export const fetchOperatorEvents = async (operatorId: number) => {
           const lastRecord = eventAttendance[0];
           if (lastRecord.status === 'check-in') {
             eventsData[i].attendance = 'present';
-            calculationsData[i].attendance = 'present';
+            if (i < calculationsData.length) {
+              calculationsData[i].attendance = 'present';
+            }
           } else if (lastRecord.status === 'check-out') {
             eventsData[i].attendance = 'completed';
-            calculationsData[i].attendance = 'completed';
+            if (i < calculationsData.length) {
+              calculationsData[i].attendance = 'completed';
+            }
+          } else if (lastRecord.status === 'present' || lastRecord.status === 'absent' || 
+                     lastRecord.status === 'late' || lastRecord.status === 'completed') {
+            // Direct attendance status
+            eventsData[i].attendance = lastRecord.status;
+            if (i < calculationsData.length) {
+              calculationsData[i].attendance = lastRecord.status;
+            }
           }
         }
       }
