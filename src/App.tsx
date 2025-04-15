@@ -1,4 +1,3 @@
-
 import { Routes, Route } from "react-router-dom";
 import "./App.css";
 import Index from "./pages/Index";
@@ -13,6 +12,7 @@ import ClientDetail from "./pages/ClientDetail";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EventCreate from "./pages/EventCreate";
+import Tasks from "./pages/Tasks";
 
 function App() {
   return (
@@ -55,6 +55,10 @@ function App() {
       <Route
         path="/client-detail/:id"
         element={<ProtectedRoute component={ClientDetail} />}
+      />
+      <Route
+        path="/tasks"
+        element={<ProtectedRoute component={Tasks} />}
       />
     </Routes>
   );

@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      attendance: {
+        Row: {
+          created_at: string
+          event_id: number
+          id: string
+          latitude: number | null
+          longitude: number | null
+          operator_id: number
+          status: string
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: number
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          operator_id: number
+          status: string
+          timestamp?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: number
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          operator_id?: number
+          status?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -157,6 +205,7 @@ export type Database = {
           account_holder: string | null
           account_number: string | null
           address: string | null
+          auth_type: string
           availability: string[] | null
           bank_name: string | null
           basic_languages: string[] | null
@@ -225,6 +274,7 @@ export type Database = {
           account_holder?: string | null
           account_number?: string | null
           address?: string | null
+          auth_type?: string
           availability?: string[] | null
           bank_name?: string | null
           basic_languages?: string[] | null
@@ -293,6 +343,7 @@ export type Database = {
           account_holder?: string | null
           account_number?: string | null
           address?: string | null
+          auth_type?: string
           availability?: string[] | null
           bank_name?: string | null
           basic_languages?: string[] | null

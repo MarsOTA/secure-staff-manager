@@ -1,10 +1,14 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
+  id: number;
   email: string;
   name: string;
+  auth_type: 'operator' | 'admin';
 }
 
 interface AuthContextType {
@@ -29,15 +33,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, remember: boolean) => {
     try {
-      // Mock login - replace with actual authentication
-      if (email === "admin@example.com" && password === "password") {
-        const userData = { email, name: "Admin User" };
+      // Try to find operator with given email
+      const { data: operators, error: operatorError } = await supabase
+        .from('operators')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (operatorError) throw new Error("Credenziali non valide");
+      
+      // For demo purposes, we're using a simple password check
+      // In production, you should use proper password hashing
+      if (password === "password") {
+        const userData = {
+          id: operators.id,
+          email: operators.email,
+          name: operators.name,
+          auth_type: operators.auth_type
+        };
+        
         setUser(userData);
         if (remember) {
           localStorage.setItem("user", JSON.stringify(userData));
         }
+        
         toast.success("Login effettuato con successo");
-        navigate("/dashboard");
+        // Redirect operators to their task page
+        if (operators.auth_type === 'operator') {
+          navigate("/tasks");
+        } else {
+          navigate("/dashboard");
+        }
       } else {
         throw new Error("Credenziali non valide");
       }
