@@ -46,6 +46,7 @@ const AttendanceAccordion: React.FC<AttendanceAccordionProps> = ({ event }) => {
           return;
         }
         
+        console.log("Attendance records for event:", event.id, data);
         setAttendanceRecords(data || []);
         
         // Calculate total hours if we have check-in and check-out

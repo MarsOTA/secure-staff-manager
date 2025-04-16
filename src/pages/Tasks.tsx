@@ -185,16 +185,27 @@ const Tasks = () => {
                         currentStatus === 'absent' ||
                         !currentStatus;
       
-      // Get position
-      let position: GeolocationPosition | { coords: { latitude: null; longitude: null } };
-      try {
-        position = await getCurrentPosition();
-        console.log("Current position:", position.coords);
-      } catch (posError) {
-        console.error("Error getting position:", posError);
-        toast.error("Non è stato possibile ottenere la posizione. Procedendo senza geolocalizzazione.");
-        // Continue without position data
-        position = { coords: { latitude: null, longitude: null } };
+      let position = { coords: { latitude: null, longitude: null } };
+      
+      // Only try to get position if browser supports geolocation
+      if (navigator.geolocation) {
+        try {
+          position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0
+            });
+          });
+          console.log("Current position:", position.coords);
+        } catch (posError) {
+          console.error("Error getting position:", posError);
+          toast.warning("Non è stato possibile ottenere la posizione. Procedendo senza geolocalizzazione.");
+          // Continue without position data
+        }
+      } else {
+        console.log("Geolocation not supported by this browser");
+        toast.warning("Geolocalizzazione non supportata dal browser");
       }
       
       const newStatus = isCheckIn ? 'check-in' : 'check-out';
@@ -230,21 +241,6 @@ const Tasks = () => {
     } finally {
       setCheckingStatus(prev => ({ ...prev, [eventId]: false }));
     }
-  };
-
-  const getCurrentPosition = (): Promise<GeolocationPosition> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocalizzazione non supportata"));
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      });
-    });
   };
 
   const getButtonLabel = (eventId: number) => {

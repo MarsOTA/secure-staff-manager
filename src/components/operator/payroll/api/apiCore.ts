@@ -82,7 +82,8 @@ export const fetchOperatorEvents = async (operatorId: number) => {
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance')
       .select('*')
-      .eq('operator_id', operatorId);
+      .eq('operator_id', operatorId)
+      .order('timestamp', { ascending: false });
       
     if (attendanceError) {
       console.error("Error fetching attendance records:", attendanceError);
@@ -110,23 +111,23 @@ export const fetchOperatorEvents = async (operatorId: number) => {
           // Use the most recent record's status
           const lastRecord = eventAttendance[0];
           
-          // Update attendance status based on the record
+          // Map check-in/check-out to attendance status
+          let attendanceStatus: "present" | "absent" | "late" | "completed" | null = null;
+          
           if (lastRecord.status === 'check-in') {
-            eventsData[i].attendance = 'present' as "present" | "absent" | "late" | "completed";
-            if (i < calculationsData.length) {
-              calculationsData[i].attendance = 'present' as "present" | "absent" | "late" | "completed";
-            }
+            attendanceStatus = 'present';
           } else if (lastRecord.status === 'check-out') {
-            eventsData[i].attendance = 'completed' as "present" | "absent" | "late" | "completed";
-            if (i < calculationsData.length) {
-              calculationsData[i].attendance = 'completed' as "present" | "absent" | "late" | "completed";
-            }
+            attendanceStatus = 'completed';
           } else if (lastRecord.status === 'present' || lastRecord.status === 'absent' || 
-                     lastRecord.status === 'late' || lastRecord.status === 'completed') {
+                    lastRecord.status === 'late' || lastRecord.status === 'completed') {
             // Direct attendance status
-            eventsData[i].attendance = lastRecord.status as "present" | "absent" | "late" | "completed";
+            attendanceStatus = lastRecord.status as "present" | "absent" | "late" | "completed";
+          }
+          
+          if (attendanceStatus) {
+            eventsData[i].attendance = attendanceStatus;
             if (i < calculationsData.length) {
-              calculationsData[i].attendance = lastRecord.status as "present" | "absent" | "late" | "completed";
+              calculationsData[i].attendance = attendanceStatus;
             }
           }
         }

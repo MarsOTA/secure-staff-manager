@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
@@ -139,12 +138,15 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
       
       if (operator.id) {
         console.log("Updating attendance in database:", eventId, attendance, operator.id);
+        
+        let dbStatus = attendance;
+        
         const { error } = await supabase
           .from('attendance')
           .insert({
             operator_id: operator.id,
             event_id: eventId,
-            status: attendance,
+            status: dbStatus,
             latitude: null,
             longitude: null
           });
