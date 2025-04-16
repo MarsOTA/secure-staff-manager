@@ -182,62 +182,83 @@ const Tasks = () => {
       // Get the current status to determine if this is a check-in or check-out
       const currentStatus = attendanceStatus[eventId] || 'check-out';
       const isCheckIn = currentStatus === 'check-out' || 
-                        currentStatus === 'absent' ||
-                        !currentStatus;
+                       currentStatus === 'absent' ||
+                       !currentStatus;
       
-      let position = { coords: { latitude: null, longitude: null } };
+      let position: GeolocationPosition;
       
-      // Only try to get position if browser supports geolocation
-      if (navigator.geolocation) {
-        try {
-          position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
+      try {
+        // Request position with a timeout of 10 seconds
+        position = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocalizzazione non supportata"));
+            return;
+          }
+
+          const timeoutId = setTimeout(() => {
+            reject(new Error("Timeout durante la richiesta della posizione"));
+          }, 10000);
+
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              clearTimeout(timeoutId);
+              resolve(pos);
+            },
+            (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            },
+            {
               enableHighAccuracy: true,
-              timeout: 5000,
+              timeout: 10000,
               maximumAge: 0
-            });
-          });
-          console.log("Current position:", position.coords);
-        } catch (posError) {
-          console.error("Error getting position:", posError);
-          toast.warning("Non è stato possibile ottenere la posizione. Procedendo senza geolocalizzazione.");
-          // Continue without position data
-        }
-      } else {
-        console.log("Geolocation not supported by this browser");
-        toast.warning("Geolocalizzazione non supportata dal browser");
+            }
+          );
+        });
+        
+        console.log("Got position:", position.coords);
+      } catch (error: any) {
+        console.error("Error getting position:", error);
+        toast.error(`Errore nella geolocalizzazione: ${error.message}`);
+        // Continue without position data
+        position = {
+          coords: {
+            latitude: null,
+            longitude: null
+          }
+        } as GeolocationPosition;
       }
       
       const newStatus = isCheckIn ? 'check-in' : 'check-out';
       
-      console.log("Previous attendance status:", currentStatus);
-      console.log("New status will be:", newStatus);
+      console.log("Inserting attendance record with status:", newStatus);
       
       // Insert new attendance record
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('attendance')
         .insert({
-          operator_id: user.id,
+          operator_id: parseInt(user.id),
           event_id: eventId,
           status: newStatus,
           latitude: position.coords.latitude,
-          longitude: position.coords.longitude
+          longitude: position.coords.longitude,
+          timestamp: new Date().toISOString()
         });
 
-      if (error) {
-        console.error("Error inserting attendance record:", error);
-        throw error;
+      if (insertError) {
+        console.error("Error inserting attendance record:", insertError);
+        throw insertError;
       }
 
-      console.log("Successfully inserted attendance record for", newStatus);
+      console.log("Successfully inserted attendance record");
 
       // Update local state
       setAttendanceStatus(prev => ({ ...prev, [eventId]: newStatus }));
       toast.success(`${isCheckIn ? 'Check-in' : 'Check-out'} effettuato con successo`);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during check-in/out:', error);
-      toast.error("Errore durante il check-in/out");
+      toast.error(`Errore durante il check-in/out: ${error.message}`);
     } finally {
       setCheckingStatus(prev => ({ ...prev, [eventId]: false }));
     }
