@@ -11,6 +11,7 @@ import PayrollHeader from "./payroll/PayrollHeader";
 import HoursAdjustmentDialog from "./payroll/HoursAdjustmentDialog";
 import AttendanceDialog from "./payroll/AttendanceDialog";
 import { toast } from "sonner";
+import AttendanceAccordion from "./payroll/AttendanceAccordion";
 
 const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
   const [isHoursDialogOpen, setIsHoursDialogOpen] = useState(false);
@@ -105,17 +106,18 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stato</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dettagli Presenza</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center">Caricamento dati...</td>
+                  <td colSpan={6} className="px-6 py-4 text-center">Caricamento dati...</td>
                 </tr>
               ) : events.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center">Nessun evento trovato</td>
+                  <td colSpan={6} className="px-6 py-4 text-center">Nessun evento trovato</td>
                 </tr>
               ) : (
                 events.map((event) => {
@@ -137,6 +139,9 @@ const PayrollTab: React.FC<{ operator: ExtendedOperator }> = ({ operator }) => {
                         ) : (
                           <span className="text-gray-400">Non registrato</span>
                         )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <AttendanceAccordion event={event} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button 

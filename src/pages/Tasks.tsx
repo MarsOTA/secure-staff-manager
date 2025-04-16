@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, Clock, ArrowRight, ArrowLeft } from "lucide-react";
 
 interface TaskEvent {
   id: number;
@@ -63,6 +63,10 @@ const Tasks = () => {
             status: "upcoming"
           }
         ]);
+        
+        // Set a default attendance status for the demo event
+        setAttendanceStatus({ 999: 'check-out' }); // Starting with check-out so the button shows check-in
+        
         setLoading(false);
         return;
       }
@@ -152,6 +156,12 @@ const Tasks = () => {
           [eventId]: lastAttendance[0].status 
         }));
         console.log(`Attendance status for event ${eventId}:`, lastAttendance[0].status);
+      } else {
+        // If no attendance record exists, default to check-out so the first button is check-in
+        setAttendanceStatus(prev => ({ 
+          ...prev, 
+          [eventId]: 'check-out' 
+        }));
       }
     } catch (error) {
       console.error("Error loading attendance:", error);
@@ -169,8 +179,14 @@ const Tasks = () => {
     try {
       console.log("Starting check-in/out process for event:", eventId);
       
+      // Get the current status to determine if this is a check-in or check-out
+      const currentStatus = attendanceStatus[eventId] || 'check-out';
+      const isCheckIn = currentStatus === 'check-out' || 
+                        currentStatus === 'absent' ||
+                        !currentStatus;
+      
       // Get position
-      let position;
+      let position: GeolocationPosition | { coords: { latitude: null; longitude: null } };
       try {
         position = await getCurrentPosition();
         console.log("Current position:", position.coords);
@@ -181,31 +197,13 @@ const Tasks = () => {
         position = { coords: { latitude: null, longitude: null } };
       }
       
-      // Get the latest attendance record for this event
-      const { data: lastAttendance, error: attendanceError } = await supabase
-        .from('attendance')
-        .select('status')
-        .eq('event_id', eventId)
-        .eq('operator_id', user.id)
-        .order('timestamp', { ascending: false })
-        .limit(1);
-        
-      if (attendanceError) {
-        console.error("Error checking existing attendance:", attendanceError);
-        throw attendanceError;
-      }
-
-      const isCheckIn = !lastAttendance || lastAttendance.length === 0 || 
-                        lastAttendance[0]?.status === 'check-out' || 
-                        lastAttendance[0]?.status === 'absent';
-                        
       const newStatus = isCheckIn ? 'check-in' : 'check-out';
       
-      console.log("Previous attendance status:", lastAttendance?.[0]?.status);
+      console.log("Previous attendance status:", currentStatus);
       console.log("New status will be:", newStatus);
       
       // Insert new attendance record
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('attendance')
         .insert({
           operator_id: user.id,
@@ -220,14 +218,12 @@ const Tasks = () => {
         throw error;
       }
 
-      console.log("Successfully inserted attendance record:", data);
+      console.log("Successfully inserted attendance record for", newStatus);
 
       // Update local state
       setAttendanceStatus(prev => ({ ...prev, [eventId]: newStatus }));
       toast.success(`${isCheckIn ? 'Check-in' : 'Check-out'} effettuato con successo`);
       
-      // Reload events to get updated data
-      await loadTodayEvents();
     } catch (error) {
       console.error('Error during check-in/out:', error);
       toast.error("Errore durante il check-in/out");
@@ -253,8 +249,22 @@ const Tasks = () => {
 
   const getButtonLabel = (eventId: number) => {
     const status = attendanceStatus[eventId];
-    if (!status || status === 'check-out' || status === 'absent') return 'Check-in';
-    return 'Check-out';
+    if (status === 'check-in') return 'Check-out';
+    return 'Check-in';
+  };
+
+  const getButtonIcon = (eventId: number) => {
+    const status = attendanceStatus[eventId];
+    if (status === 'check-in') return <ArrowLeft className="h-4 w-4 mr-2" />;
+    return <ArrowRight className="h-4 w-4 mr-2" />;
+  };
+
+  const getButtonColor = (eventId: number) => {
+    const status = attendanceStatus[eventId];
+    if (status === 'check-in') {
+      return 'bg-amber-500 hover:bg-amber-600';
+    }
+    return 'bg-green-500 hover:bg-green-600';
   };
 
   if (loading) {
@@ -286,17 +296,20 @@ const Tasks = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-2">
-                    <div>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="font-medium">Periodo:</span>{" "}
                       {format(new Date(event.start_date), "dd/MM/yyyy")} -{" "}
                       {format(new Date(event.end_date), "dd/MM/yyyy")}
                     </div>
-                    <div>
+                    <div className="flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="font-medium">Orario:</span>{" "}
                       {format(new Date(event.start_date), "HH:mm")} -{" "}
                       {format(new Date(event.end_date), "HH:mm")}
                     </div>
-                    <div>
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="font-medium">Luogo:</span> {event.location}
                     </div>
                     {attendanceStatus[event.id] && (
@@ -310,24 +323,22 @@ const Tasks = () => {
                             : 'bg-gray-100 text-gray-800'
                         }`}>
                           {attendanceStatus[event.id] === 'check-in' ? 'Presente' : 
-                           attendanceStatus[event.id] === 'check-out' ? 'Uscito' : 
+                           attendanceStatus[event.id] === 'check-out' ? 'Assente/Non registrato' : 
                            attendanceStatus[event.id]}
                         </span>
                       </div>
                     )}
                   </div>
                   <Button
-                    className={`w-full ${
-                      attendanceStatus[event.id] === 'check-in' 
-                        ? 'bg-amber-500 hover:bg-amber-600' 
-                        : 'bg-green-500 hover:bg-green-600'
-                    }`}
+                    className={`w-full ${getButtonColor(event.id)}`}
                     onClick={() => handleCheckInOut(event.id)}
                     disabled={checkingStatus[event.id]}
                   >
                     {checkingStatus[event.id] ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : null}
+                    ) : (
+                      getButtonIcon(event.id)
+                    )}
                     {getButtonLabel(event.id)}
                   </Button>
                 </CardContent>

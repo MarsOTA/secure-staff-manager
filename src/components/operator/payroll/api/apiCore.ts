@@ -109,15 +109,17 @@ export const fetchOperatorEvents = async (operatorId: number) => {
           
           // Use the most recent record's status
           const lastRecord = eventAttendance[0];
+          
+          // Update attendance status based on the record
           if (lastRecord.status === 'check-in') {
-            eventsData[i].attendance = 'present';
+            eventsData[i].attendance = 'present' as "present" | "absent" | "late" | "completed";
             if (i < calculationsData.length) {
-              calculationsData[i].attendance = 'present';
+              calculationsData[i].attendance = 'present' as "present" | "absent" | "late" | "completed";
             }
           } else if (lastRecord.status === 'check-out') {
-            eventsData[i].attendance = 'completed';
+            eventsData[i].attendance = 'completed' as "present" | "absent" | "late" | "completed";
             if (i < calculationsData.length) {
-              calculationsData[i].attendance = 'completed';
+              calculationsData[i].attendance = 'completed' as "present" | "absent" | "late" | "completed";
             }
           } else if (lastRecord.status === 'present' || lastRecord.status === 'absent' || 
                      lastRecord.status === 'late' || lastRecord.status === 'completed') {

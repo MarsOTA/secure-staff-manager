@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Event, PayrollCalculation, PayrollSummary } from "../types";
@@ -111,7 +112,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
         return false;
       }
 
-      const validAttendance = attendance as "present" | "absent" | "late" | "completed" | null;
+      const validAttendance = attendance as "present" | "absent" | "late" | "completed";
       
       const updatedEvents = events.map(event => {
         if (event.id === eventId) {
@@ -133,8 +134,8 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
         return calc;
       });
       
-      setEvents(updatedEvents as Event[]);
-      setCalculations(updatedCalculations as PayrollCalculation[]);
+      setEvents(updatedEvents);
+      setCalculations(updatedCalculations);
       
       if (operator.id) {
         console.log("Updating attendance in database:", eventId, attendance, operator.id);
@@ -215,7 +216,7 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
             
             return {
               ...event,
-              attendance: statusMap[lastRecord.status] || null
+              attendance: statusMap[lastRecord.status] || event.attendance
             };
           }
           
@@ -253,10 +254,10 @@ export const usePayrollData = (operator: ExtendedOperator, contractHourlyRate: n
           };
         });
         
-        setEvents(eventsWithAttendance as Event[]);
-        setCalculations(processedCalculations as PayrollCalculation[]);
+        setEvents(eventsWithAttendance);
+        setCalculations(processedCalculations);
         
-        const summary = calculateSummary(processedCalculations as PayrollCalculation[]);
+        const summary = calculateSummary(processedCalculations);
         setSummaryData(summary);
         
       } catch (error) {
